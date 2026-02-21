@@ -3,7 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from './db';
+import pool from './db.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
