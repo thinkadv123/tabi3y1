@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node dist/server.js",
-    "build": "vite build && tsc server.ts --outDir dist --esModuleInterop",
+    "build": "vite build && tsc -p tsconfig.server.json",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },
