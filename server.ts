@@ -1,30 +1,38 @@
-import express from 'express';
-import cors from 'cors';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import pool from './db.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import express from "express";
+import cors from "cors";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+// ✅ ESM: لازم الامتداد .js (لأن ts بيتحوّل لـ js في runtime)
+import pool from "./db.js";
+
+// Vite dev middleware (بس في dev)
+import { createServer as createViteServer } from "vite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ✅ في Hostinger غالبًا NODE_ENV مش دايمًا بتكون production
+// هنعتبر Production لو فيه dist assets (أو لو NODE_ENV=production)
+const isProd = process.env.NODE_ENV === "production";
+
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
-  const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+  // ✅ لازم number (عشان خطأ TS2769)
+  const PORT = Number(process.env.PORT) || 3000;
+
+  const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
   app.use(cors());
   app.use(express.json());
 
   // --- Auth Middleware ---
   const authenticateToken = (req: any, res: any, next: any) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
     if (!token) return res.sendStatus(401);
 
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
@@ -34,161 +42,187 @@ async function startServer() {
     });
   };
 
+  // --- Health Check ---
+  app.get("/health", (_req, res) => {
+    res.json({ ok: true, env: process.env.NODE_ENV || "not-set" });
+  });
+
   // --- Seed Admin User ---
   try {
-    const [userRows] = await pool.query('SELECT COUNT(*) as count FROM users');
+    const [userRows] = await pool.query("SELECT COUNT(*) as count FROM users");
     const userCount = (userRows as any)[0].count;
+
     if (userCount === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', ['admin', hashedPassword]);
-      console.log('Admin user created: admin / admin123');
+      const hashedPassword = await bcrypt.hash("admin123", 10);
+      await pool.query(
+        "INSERT INTO users (username, password) VALUES (?, ?)",
+        ["admin", hashedPassword]
+      );
+      console.log("Admin user created: admin / admin123");
     }
   } catch (err) {
-    console.error('Failed to seed admin user:', err);
+    console.error("Failed to seed admin user:", err);
   }
 
   // --- API Routes ---
 
   // Login
-  app.post('/api/login', async (req, res) => {
+  app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
+
     try {
-      const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
+      const [rows] = await pool.query("SELECT * FROM users WHERE username = ?", [
+        username,
+      ]);
       const user = (rows as any)[0];
 
-      if (!user) {
-        return res.status(400).json({ message: 'User not found' });
-      }
+      if (!user) return res.status(400).json({ message: "User not found" });
 
-      if (await bcrypt.compare(password, user.password)) {
-        const token = jwt.sign({ username: user.username }, JWT_SECRET);
-        res.json({ token });
-      } else {
-        res.status(403).json({ message: 'Invalid password' });
-      }
+      const ok = await bcrypt.compare(password, user.password);
+      if (!ok) return res.status(403).json({ message: "Invalid password" });
+
+      const token = jwt.sign({ username: user.username }, JWT_SECRET);
+      res.json({ token });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Products
-  app.get('/api/products', async (req, res) => {
+  app.get("/api/products", async (_req, res) => {
     try {
-      const [products] = await pool.query('SELECT * FROM products');
+      const [products] = await pool.query("SELECT * FROM products");
       res.json(products);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.post('/api/products', authenticateToken, async (req, res) => {
+  app.post("/api/products", authenticateToken, async (req, res) => {
     const { id, name, price, description, image, category, unit } = req.body;
     try {
-      await pool.query('INSERT INTO products (id, name, price, description, image, category, unit) VALUES (?, ?, ?, ?, ?, ?, ?)', [id, name, price, description, image, category, unit]);
-      res.status(201).json({ message: 'Product created' });
+      await pool.query(
+        "INSERT INTO products (id, name, price, description, image, category, unit) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [id, name, price, description, image, category, unit]
+      );
+      res.status(201).json({ message: "Product created" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.put('/api/products/:id', authenticateToken, async (req, res) => {
+  app.put("/api/products/:id", authenticateToken, async (req, res) => {
     const { name, price, description, image, category, unit } = req.body;
     const { id } = req.params;
     try {
-      await pool.query('UPDATE products SET name = ?, price = ?, description = ?, image = ?, category = ?, unit = ? WHERE id = ?', [name, price, description, image, category, unit, id]);
-      res.json({ message: 'Product updated' });
+      await pool.query(
+        "UPDATE products SET name = ?, price = ?, description = ?, image = ?, category = ?, unit = ? WHERE id = ?",
+        [name, price, description, image, category, unit, id]
+      );
+      res.json({ message: "Product updated" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.delete('/api/products/:id', authenticateToken, async (req, res) => {
+  app.delete("/api/products/:id", authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
-      await pool.query('DELETE FROM products WHERE id = ?', [id]);
-      res.json({ message: 'Product deleted' });
+      await pool.query("DELETE FROM products WHERE id = ?", [id]);
+      res.json({ message: "Product deleted" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Categories
-  app.get('/api/categories', async (req, res) => {
+  app.get("/api/categories", async (_req, res) => {
     try {
-      const [categories] = await pool.query('SELECT * FROM categories');
+      const [categories] = await pool.query("SELECT * FROM categories");
       res.json(categories);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.post('/api/categories', authenticateToken, async (req, res) => {
+  app.post("/api/categories", authenticateToken, async (req, res) => {
     const { id, name } = req.body;
     try {
-      await pool.query('INSERT INTO categories (id, name) VALUES (?, ?)', [id, name]);
-      res.status(201).json({ message: 'Category created' });
+      await pool.query("INSERT INTO categories (id, name) VALUES (?, ?)", [
+        id,
+        name,
+      ]);
+      res.status(201).json({ message: "Category created" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
+  app.delete("/api/categories/:id", authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
-      await pool.query('DELETE FROM categories WHERE id = ?', [id]);
-      res.json({ message: 'Category deleted' });
+      await pool.query("DELETE FROM categories WHERE id = ?", [id]);
+      res.json({ message: "Category deleted" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Site Content
-  app.get('/api/content', async (req, res) => {
+  app.get("/api/content", async (_req, res) => {
     try {
-      const [rows] = await pool.query('SELECT data FROM site_content WHERE type = ?', ['site_content']);
+      const [rows] = await pool.query(
+        "SELECT data FROM site_content WHERE type = ?",
+        ["site_content"]
+      );
       const content = (rows as any)[0];
-      if (content) {
-        res.json(JSON.parse(content.data));
-      } else {
-        res.status(404).json({ message: 'Content not found' });
-      }
+      if (content) return res.json(JSON.parse(content.data));
+      res.status(404).json({ message: "Content not found" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.put('/api/content', authenticateToken, async (req, res) => {
+  app.put("/api/content", authenticateToken, async (req, res) => {
     const content = req.body;
     try {
-      // MySQL's INSERT ... ON DUPLICATE KEY UPDATE syntax or REPLACE INTO
-      await pool.query('REPLACE INTO site_content (id, type, data) VALUES (?, ?, ?)', ['1', 'site_content', JSON.stringify(content)]);
-      res.json({ message: 'Content updated' });
+      await pool.query(
+        "REPLACE INTO site_content (id, type, data) VALUES (?, ?, ?)",
+        ["1", "site_content", JSON.stringify(content)]
+      );
+      res.json({ message: "Content updated" });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  // --- Static Files (Production Only) ---
-  // When running from dist/server.js, __dirname is .../dist
-  // When running from server.ts (dev), __dirname is .../root
-  // We want to serve the directory where index.html lives.
-  // In production build, index.html is in dist/.
-  
-  // If we are in dist (production run), serve current directory.
-  // If we are in root (dev run), serve ./dist
-  const staticPath = __dirname.endsWith('dist') 
-    ? __dirname 
-    : path.join(__dirname, 'dist');
+  // --- Frontend Serving (Vite Dev / Prod) ---
+  if (!isProd) {
+    // DEV: Vite middleware
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    /**
+     * ✅ PROD:
+     * بعد build:
+     * - vite بيطلع: dist/index.html + dist/assets/*
+     * - tsc بيطلع: dist/server.js (+ dist/db.js ...)
+     *
+     * فـ __dirname هنا = folder بتاع dist (لأن entry عندك dist/server.js)
+     * يبقى لازم نخدم static من __dirname (مش __dirname/dist)
+     */
+    app.use(express.static(__dirname));
 
-  app.use(express.static(staticPath));
+    app.get("*", (_req, res) => {
+      res.sendFile(path.join(__dirname, "index.html"));
+    });
+  }
 
-  // SPA Fallback
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'));
-  });
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
