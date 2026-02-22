@@ -11,6 +11,10 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
         allowedHosts: ['tabi3y.com'],
       },
+      build: {
+        outDir: 'dist/public',
+        emptyOutDir: true,
+      },
       plugins: [
         react(),
         tailwindcss(),

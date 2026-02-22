@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node dist/server.js",
-    "build": "vite build && tsc server.ts --outDir dist --esModuleInterop --module esnext --target esnext --moduleResolution bundler --skipLibCheck",
+    "build": "vite build && tsc server.ts --outDir dist --esModuleInterop --module nodenext --target esnext --moduleResolution nodenext --skipLibCheck",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },
