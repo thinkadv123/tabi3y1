@@ -119,6 +119,6 @@ async function initDb() {
   }
 }
 
-initDb();
+
 
 export default pool;
