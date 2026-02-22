@@ -1,30 +1,26 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// ✅ serve Vite build
-app.use(express.static(path.join(__dirname, "dist")));
+// ✅ IMPORTANT: dist folder from project root
+const distPath = path.join(process.cwd(), "dist");
 
-// ✅ health check
-app.get("/health", (_req, res) => {
-  res.send("OK");
-});
+// ✅ serve static assets ( /assets/... )
+app.use(express.static(distPath));
 
-// ✅ SPA fallback (VERY IMPORTANT)
+// ✅ health
+app.get("/health", (_req, res) => res.send("OK"));
+
+// ✅ SPA fallback
 app.get("*", (_req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
+// ✅ PORT must be from host
 const port = Number(process.env.PORT) || 3000;
-app.listen(port, () => {
-  console.log("Server running on port", port);
-});
+app.listen(port, () => console.log("Server running on", port));
