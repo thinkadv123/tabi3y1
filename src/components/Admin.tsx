@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit, Save, X, Sparkles, Layout, FileText, ShoppingBag } from 'lucide-react';
-// import { GoogleGenAI } from "@google/genai";
 import { Product, Category, SiteContent } from '../types';
 
 interface AdminProps {

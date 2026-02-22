@@ -13,7 +13,7 @@ import Login from './components/Login';
 import { Product, CartItem, ViewState, Category, SiteContent } from './types';
 import { INITIAL_SITE_CONTENT } from './data';
 
-import { storage } from './services/storage';
+import { api } from './services/api';
 
 function App() {
   const [view, setView] = useState<ViewState>('home');
@@ -30,23 +30,31 @@ function App() {
     if (window.location.pathname === '/admin') {
       setView('admin');
     }
-    // Initialize local storage with seed data
-    storage.init();
     fetchData();
   }, []);
 
-  // Fetch Data from Local Storage
-  const fetchData = () => {
-    setProducts(storage.getProducts());
-    setCategories(storage.getCategories());
-    setSiteContent(storage.getContent());
+  // Fetch Data from API
+  const fetchData = async () => {
+    try {
+      const [prods, cats, content] = await Promise.all([
+        api.getProducts(),
+        api.getCategories(),
+        api.getContent()
+      ]);
+      setProducts(prods);
+      setCategories(cats);
+      setSiteContent(content);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      showToast('Failed to load data', 'error');
+    }
   };
 
   useEffect(() => {
     const storedCart = localStorage.getItem('tabi3y_cart');
     if (storedCart) setCart(JSON.parse(storedCart));
     
-    const token = storage.getToken();
+    const token = localStorage.getItem('tabi3y_token');
     if (token) setAuthToken(token);
   }, []);
 
@@ -60,12 +68,13 @@ function App() {
 
   const handleLogin = (token: string) => {
     setAuthToken(token);
+    localStorage.setItem('tabi3y_token', token);
     showToast('Logged in successfully');
   };
 
   const handleLogout = () => {
     setAuthToken(null);
-    storage.logout();
+    localStorage.removeItem('tabi3y_token');
     setView('home');
     showToast('Logged out');
   };
@@ -104,45 +113,63 @@ function App() {
   };
 
   // ... Admin Handlers ...
-  const handleAddProduct = (product: Product) => {
-    if (storage.saveProduct(product)) {
+  const handleAddProduct = async (product: Product) => {
+    if (!authToken) return;
+    if (await api.saveProduct(product, authToken)) {
       showToast('Product added');
       fetchData();
+    } else {
+      showToast('Failed to add product', 'error');
     }
   };
 
-  const handleUpdateProduct = (product: Product) => {
-    if (storage.saveProduct(product)) {
+  const handleUpdateProduct = async (product: Product) => {
+    if (!authToken) return;
+    if (await api.updateProduct(product, authToken)) {
       showToast('Product updated');
       fetchData();
+    } else {
+      showToast('Failed to update product', 'error');
     }
   };
 
-  const handleDeleteProduct = (id: string) => {
-    if (storage.deleteProduct(id)) {
+  const handleDeleteProduct = async (id: string) => {
+    if (!authToken) return;
+    if (await api.deleteProduct(id, authToken)) {
       showToast('Product deleted', 'error');
       fetchData();
+    } else {
+      showToast('Failed to delete product', 'error');
     }
   };
 
-  const handleAddCategory = (category: Category) => {
-    if (storage.saveCategory(category)) {
+  const handleAddCategory = async (category: Category) => {
+    if (!authToken) return;
+    if (await api.saveCategory(category, authToken)) {
       showToast('Category added');
       fetchData();
+    } else {
+      showToast('Failed to add category', 'error');
     }
   };
 
-  const handleDeleteCategory = (id: string) => {
-    if (storage.deleteCategory(id)) {
+  const handleDeleteCategory = async (id: string) => {
+    if (!authToken) return;
+    if (await api.deleteCategory(id, authToken)) {
       showToast('Category deleted', 'error');
       fetchData();
+    } else {
+      showToast('Failed to delete category', 'error');
     }
   };
 
-  const handleUpdateSiteContent = (content: SiteContent) => {
-    if (storage.saveContent(content)) {
+  const handleUpdateSiteContent = async (content: SiteContent) => {
+    if (!authToken) return;
+    if (await api.saveContent(content, authToken)) {
       showToast('Content updated');
       fetchData();
+    } else {
+      showToast('Failed to update content', 'error');
     }
   };
 

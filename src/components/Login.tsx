@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, User } from 'lucide-react';
-import { storage } from '../services/storage';
+import { api } from '../services/api';
 
 interface LoginProps {
   onLogin: (token: string) => void;
@@ -14,7 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = storage.login(username, password);
+      const token = await api.login(username, password);
       if (token) {
         onLogin(token);
       } else {
