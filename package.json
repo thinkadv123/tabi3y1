@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node dist/server.js",
-    "build": "vite build && tsc server.ts --outDir dist --esModuleInterop --module nodenext --target esnext --moduleResolution nodenext --skipLibCheck",
+    "build": "vite build && tsc server.ts --outDir dist --esModuleInterop",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },
@@ -21,7 +21,6 @@
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.575.0",
     "motion": "^12.34.2",
-    "mysql2": "^3.17.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tailwind-merge": "^3.5.0"

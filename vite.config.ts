@@ -9,11 +9,6 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
-        allowedHosts: ['tabi3y.com'],
-      },
-      build: {
-        outDir: 'dist/public',
-        emptyOutDir: true,
       },
       plugins: [
         react(),

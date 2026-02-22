@@ -3,7 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from './db.js';
+import db from './db';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -32,16 +32,11 @@ async function startServer() {
   };
 
   // --- Seed Admin User ---
-  try {
-    const [userRows] = await pool.query('SELECT COUNT(*) as count FROM users');
-    const userCount = (userRows as any)[0].count;
-    if (userCount === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await pool.query('INSERT INTO users (username, password) VALUES (?, ?)', ['admin', hashedPassword]);
-      console.log('Admin user created: admin / admin123');
-    }
-  } catch (err) {
-    console.error('Failed to seed admin user:', err);
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
+  if (userCount.count === 0) {
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run('admin', hashedPassword);
+    console.log('Admin user created: admin / admin123');
   }
 
   // --- API Routes ---
@@ -49,60 +44,51 @@ async function startServer() {
   // Login
   app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    try {
-      const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-      const user = (rows as any)[0];
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
 
-      if (!user) {
-        return res.status(400).json({ message: 'User not found' });
-      }
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
 
-      if (await bcrypt.compare(password, user.password)) {
-        const token = jwt.sign({ username: user.username }, JWT_SECRET);
-        res.json({ token });
-      } else {
-        res.status(403).json({ message: 'Invalid password' });
-      }
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    if (await bcrypt.compare(password, user.password)) {
+      const token = jwt.sign({ username: user.username }, JWT_SECRET);
+      res.json({ token });
+    } else {
+      res.status(403).json({ message: 'Invalid password' });
     }
   });
 
   // Products
-  app.get('/api/products', async (req, res) => {
-    try {
-      const [products] = await pool.query('SELECT * FROM products');
-      res.json(products);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
+  app.get('/api/products', (req, res) => {
+    const products = db.prepare('SELECT * FROM products').all();
+    res.json(products);
   });
 
-  app.post('/api/products', authenticateToken, async (req, res) => {
+  app.post('/api/products', authenticateToken, (req, res) => {
     const { id, name, price, description, image, category, unit } = req.body;
     try {
-      await pool.query('INSERT INTO products (id, name, price, description, image, category, unit) VALUES (?, ?, ?, ?, ?, ?, ?)', [id, name, price, description, image, category, unit]);
+      db.prepare('INSERT INTO products (id, name, price, description, image, category, unit) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, name, price, description, image, category, unit);
       res.status(201).json({ message: 'Product created' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.put('/api/products/:id', authenticateToken, async (req, res) => {
+  app.put('/api/products/:id', authenticateToken, (req, res) => {
     const { name, price, description, image, category, unit } = req.body;
     const { id } = req.params;
     try {
-      await pool.query('UPDATE products SET name = ?, price = ?, description = ?, image = ?, category = ?, unit = ? WHERE id = ?', [name, price, description, image, category, unit, id]);
+      db.prepare('UPDATE products SET name = ?, price = ?, description = ?, image = ?, category = ?, unit = ? WHERE id = ?').run(name, price, description, image, category, unit, id);
       res.json({ message: 'Product updated' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.delete('/api/products/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/products/:id', authenticateToken, (req, res) => {
     const { id } = req.params;
     try {
-      await pool.query('DELETE FROM products WHERE id = ?', [id]);
+      db.prepare('DELETE FROM products WHERE id = ?').run(id);
       res.json({ message: 'Product deleted' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -110,29 +96,25 @@ async function startServer() {
   });
 
   // Categories
-  app.get('/api/categories', async (req, res) => {
-    try {
-      const [categories] = await pool.query('SELECT * FROM categories');
-      res.json(categories);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
+  app.get('/api/categories', (req, res) => {
+    const categories = db.prepare('SELECT * FROM categories').all();
+    res.json(categories);
   });
 
-  app.post('/api/categories', authenticateToken, async (req, res) => {
+  app.post('/api/categories', authenticateToken, (req, res) => {
     const { id, name } = req.body;
     try {
-      await pool.query('INSERT INTO categories (id, name) VALUES (?, ?)', [id, name]);
+      db.prepare('INSERT INTO categories (id, name) VALUES (?, ?)').run(id, name);
       res.status(201).json({ message: 'Category created' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/categories/:id', authenticateToken, (req, res) => {
     const { id } = req.params;
     try {
-      await pool.query('DELETE FROM categories WHERE id = ?', [id]);
+      db.prepare('DELETE FROM categories WHERE id = ?').run(id);
       res.json({ message: 'Category deleted' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -140,25 +122,19 @@ async function startServer() {
   });
 
   // Site Content
-  app.get('/api/content', async (req, res) => {
-    try {
-      const [rows] = await pool.query('SELECT data FROM site_content WHERE type = ?', ['site_content']);
-      const content = (rows as any)[0];
-      if (content) {
-        res.json(JSON.parse(content.data));
-      } else {
-        res.status(404).json({ message: 'Content not found' });
-      }
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+  app.get('/api/content', (req, res) => {
+    const content = db.prepare('SELECT data FROM site_content WHERE type = ?').get('site_content') as { data: string };
+    if (content) {
+      res.json(JSON.parse(content.data));
+    } else {
+      res.status(404).json({ message: 'Content not found' });
     }
   });
 
-  app.put('/api/content', authenticateToken, async (req, res) => {
+  app.put('/api/content', authenticateToken, (req, res) => {
     const content = req.body;
     try {
-      // MySQL's INSERT ... ON DUPLICATE KEY UPDATE syntax or REPLACE INTO
-      await pool.query('REPLACE INTO site_content (id, type, data) VALUES (?, ?, ?)', ['1', 'site_content', JSON.stringify(content)]);
+      db.prepare('INSERT OR REPLACE INTO site_content (id, type, data) VALUES (?, ?, ?)').run('1', 'site_content', JSON.stringify(content));
       res.json({ message: 'Content updated' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -174,9 +150,9 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     // Serve static files in production
-    app.use(express.static(path.join(__dirname, 'public')));
+    app.use(express.static(path.join(__dirname, 'dist')));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     });
   }
 
