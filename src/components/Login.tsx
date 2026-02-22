@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, User } from 'lucide-react';
+import { storage } from '../services/storage';
 
 interface LoginProps {
   onLogin: (token: string) => void;
@@ -13,15 +14,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        onLogin(data.token);
+      const token = storage.login(username, password);
+      if (token) {
+        onLogin(token);
       } else {
         setError('Invalid credentials');
       }

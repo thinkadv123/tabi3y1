@@ -13,6 +13,8 @@ import Login from './components/Login';
 import { Product, CartItem, ViewState, Category, SiteContent } from './types';
 import { INITIAL_SITE_CONTENT } from './data';
 
+import { storage } from './services/storage';
+
 function App() {
   const [view, setView] = useState<ViewState>('home');
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,31 +30,23 @@ function App() {
     if (window.location.pathname === '/admin') {
       setView('admin');
     }
+    // Initialize local storage with seed data
+    storage.init();
+    fetchData();
   }, []);
 
-  // Fetch Data from API
-  const fetchData = async () => {
-    try {
-      const [productsRes, categoriesRes, contentRes] = await Promise.all([
-        fetch('/api/products'),
-        fetch('/api/categories'),
-        fetch('/api/content')
-      ]);
-
-      if (productsRes.ok) setProducts(await productsRes.json());
-      if (categoriesRes.ok) setCategories(await categoriesRes.json());
-      if (contentRes.ok) setSiteContent(await contentRes.json());
-    } catch (error) {
-      console.error('Failed to fetch data', error);
-    }
+  // Fetch Data from Local Storage
+  const fetchData = () => {
+    setProducts(storage.getProducts());
+    setCategories(storage.getCategories());
+    setSiteContent(storage.getContent());
   };
 
   useEffect(() => {
-    fetchData();
     const storedCart = localStorage.getItem('tabi3y_cart');
     if (storedCart) setCart(JSON.parse(storedCart));
     
-    const token = localStorage.getItem('admin_token');
+    const token = storage.getToken();
     if (token) setAuthToken(token);
   }, []);
 
@@ -66,13 +60,12 @@ function App() {
 
   const handleLogin = (token: string) => {
     setAuthToken(token);
-    localStorage.setItem('admin_token', token);
     showToast('Logged in successfully');
   };
 
   const handleLogout = () => {
     setAuthToken(null);
-    localStorage.removeItem('admin_token');
+    storage.logout();
     setView('home');
     showToast('Logged out');
   };
@@ -110,49 +103,47 @@ function App() {
     setView('home');
   };
 
-  // ... Admin API Handlers ...
-  const apiCall = async (url: string, method: string, body?: any) => {
-    if (!authToken) return;
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) throw new Error('API Error');
-      fetchData(); // Refresh data
-      return true;
-    } catch (err) {
-      showToast('Operation failed', 'error');
-      return false;
+  // ... Admin Handlers ...
+  const handleAddProduct = (product: Product) => {
+    if (storage.saveProduct(product)) {
+      showToast('Product added');
+      fetchData();
     }
   };
 
-  const handleAddProduct = async (product: Product) => {
-    if (await apiCall('/api/products', 'POST', product)) showToast('Product added');
+  const handleUpdateProduct = (product: Product) => {
+    if (storage.saveProduct(product)) {
+      showToast('Product updated');
+      fetchData();
+    }
   };
 
-  const handleUpdateProduct = async (product: Product) => {
-    if (await apiCall(`/api/products/${product.id}`, 'PUT', product)) showToast('Product updated');
+  const handleDeleteProduct = (id: string) => {
+    if (storage.deleteProduct(id)) {
+      showToast('Product deleted', 'error');
+      fetchData();
+    }
   };
 
-  const handleDeleteProduct = async (id: string) => {
-    if (await apiCall(`/api/products/${id}`, 'DELETE')) showToast('Product deleted', 'error');
+  const handleAddCategory = (category: Category) => {
+    if (storage.saveCategory(category)) {
+      showToast('Category added');
+      fetchData();
+    }
   };
 
-  const handleAddCategory = async (category: Category) => {
-    if (await apiCall('/api/categories', 'POST', category)) showToast('Category added');
+  const handleDeleteCategory = (id: string) => {
+    if (storage.deleteCategory(id)) {
+      showToast('Category deleted', 'error');
+      fetchData();
+    }
   };
 
-  const handleDeleteCategory = async (id: string) => {
-    if (await apiCall(`/api/categories/${id}`, 'DELETE')) showToast('Category deleted', 'error');
-  };
-
-  const handleUpdateSiteContent = async (content: SiteContent) => {
-    if (await apiCall('/api/content', 'PUT', content)) showToast('Content updated');
+  const handleUpdateSiteContent = (content: SiteContent) => {
+    if (storage.saveContent(content)) {
+      showToast('Content updated');
+      fetchData();
+    }
   };
 
   const filteredProducts = selectedCategory === 'All' 
