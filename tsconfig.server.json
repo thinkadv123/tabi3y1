@@ -3,10 +3,12 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
+    "outDir": ".",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "allowJs": false
   },
-  "include": ["server.ts"]
+  "include": ["./server.ts", "./db.ts"],
+  "exclude": ["node_modules", "dist"]
 }
