@@ -1,8 +1,9 @@
 import express from 'express';
+import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from './db.js';
+import pool from './db';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,14 +11,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = 3000;
   const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
   app.use(cors());
   app.use(express.json());
-
-  // --- Health Check ---
-  app.get('/health', (req, res) => res.send('OK'));
 
   // --- Auth Middleware ---
   const authenticateToken = (req: any, res: any, next: any) => {
@@ -167,11 +165,20 @@ async function startServer() {
     }
   });
 
-  // --- Serve Static Files (Production) ---
-  app.use(express.static(path.join(__dirname, 'dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
+  // --- Vite Middleware ---
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    // Serve static files in production
+    app.use(express.static(path.join(__dirname, 'dist')));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    });
+  }
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
@@ -179,4 +186,3 @@ async function startServer() {
 }
 
 startServer();
-
