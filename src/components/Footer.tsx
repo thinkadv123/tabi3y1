@@ -61,8 +61,9 @@ const Footer: React.FC<FooterProps> = () => {
           </div>
         </div>
         
-        <div className="border-t border-[#F5F5F0]/10 mt-12 pt-8 text-center text-xs text-[#F5F5F0]/40">
-          &copy; {new Date().getFullYear()} Tabi3y Organic Market. All rights reserved.
+        <div className="border-t border-[#F5F5F0]/10 mt-12 pt-8 text-center text-xs text-[#F5F5F0]/40 flex justify-between items-center">
+          <span>&copy; {new Date().getFullYear()} Tabi3y Organic Market. All rights reserved.</span>
+          <a href="/admin" className="hover:text-[#F4E285] transition-colors">Admin</a>
         </div>
       </div>
     </footer>

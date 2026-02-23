@@ -1,80 +1,115 @@
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_SITE_CONTENT } from '../src/data';
+import dotenv from 'dotenv';
 
-const dbPath = path.resolve(process.cwd(), 'server/data/app.db');
-console.log('Database path:', dbPath);
+dotenv.config();
 
-let db;
-try {
-  db = new Database(dbPath);
-} catch (err) {
-  console.error('Failed to open database:', err);
-  process.exit(1);
-}
+const dbPath = process.env.TURSO_DATABASE_URL 
+  ? process.env.TURSO_DATABASE_URL 
+  : `file:${path.resolve(process.cwd(), 'server/data/app.db')}`;
+
+console.log('Database URL:', dbPath);
+
+const db = createClient({
+  url: dbPath,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
 // Initialize Tables
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL
-    );
+const initDb = async () => {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+      );
+    `);
 
-    CREATE TABLE IF NOT EXISTS categories (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL
-    );
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL
+      );
+    `);
 
-    CREATE TABLE IF NOT EXISTS products (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      price REAL NOT NULL,
-      category TEXT NOT NULL,
-      image TEXT,
-      description TEXT,
-      unit TEXT
-    );
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        price REAL NOT NULL,
+        category TEXT NOT NULL,
+        image TEXT,
+        description TEXT,
+        unit TEXT
+      );
+    `);
 
-    CREATE TABLE IF NOT EXISTS site_content (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-  `);
-} catch (err) {
-  console.error('Failed to create tables:', err);
-}
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS site_content (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+    
+    console.log('Tables initialized.');
+    await seedData();
+  } catch (err) {
+    console.error('Failed to initialize database:', err);
+  }
+};
 
 // Seed Initial Data
-const seedData = () => {
+const seedData = async () => {
   try {
-    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-    if (userCount.count === 0) {
+    const userCountResult = await db.execute('SELECT COUNT(*) as count FROM users');
+    const userCount = userCountResult.rows[0].count as number;
+    
+    if (userCount === 0) {
       const hash = bcrypt.hashSync('admin123', 10);
-      db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run('admin', hash);
+      await db.execute({
+        sql: 'INSERT INTO users (username, password) VALUES (?, ?)',
+        args: ['admin', hash]
+      });
       console.log('Seeded admin user.');
     }
 
-    const categoryCount = db.prepare('SELECT COUNT(*) as count FROM categories').get() as { count: number };
-    if (categoryCount.count === 0) {
-      const insert = db.prepare('INSERT INTO categories (id, name) VALUES (?, ?)');
-      INITIAL_CATEGORIES.forEach((cat: any) => insert.run(cat.id, cat.name));
+    const categoryCountResult = await db.execute('SELECT COUNT(*) as count FROM categories');
+    const categoryCount = categoryCountResult.rows[0].count as number;
+
+    if (categoryCount === 0) {
+      for (const cat of INITIAL_CATEGORIES) {
+        await db.execute({
+          sql: 'INSERT INTO categories (id, name) VALUES (?, ?)',
+          args: [cat.id, cat.name]
+        });
+      }
       console.log('Seeded categories.');
     }
 
-    const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number };
-    if (productCount.count === 0) {
-      const insert = db.prepare('INSERT INTO products (id, name, price, category, image, description, unit) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      INITIAL_PRODUCTS.forEach((prod: any) => insert.run(prod.id, prod.name, prod.price, prod.category, prod.image, prod.description, prod.unit));
+    const productCountResult = await db.execute('SELECT COUNT(*) as count FROM products');
+    const productCount = productCountResult.rows[0].count as number;
+
+    if (productCount === 0) {
+      for (const prod of INITIAL_PRODUCTS) {
+        await db.execute({
+          sql: 'INSERT INTO products (id, name, price, category, image, description, unit) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          args: [prod.id, prod.name, prod.price, prod.category, prod.image, prod.description, prod.unit]
+        });
+      }
       console.log('Seeded products.');
     }
 
-    const contentCount = db.prepare('SELECT COUNT(*) as count FROM site_content').get() as { count: number };
-    if (contentCount.count === 0) {
-      const insert = db.prepare('INSERT INTO site_content (key, value) VALUES (?, ?)');
-      insert.run('main', JSON.stringify(INITIAL_SITE_CONTENT));
+    const contentCountResult = await db.execute('SELECT COUNT(*) as count FROM site_content');
+    const contentCount = contentCountResult.rows[0].count as number;
+
+    if (contentCount === 0) {
+      await db.execute({
+        sql: 'INSERT INTO site_content (key, value) VALUES (?, ?)',
+        args: ['main', JSON.stringify(INITIAL_SITE_CONTENT)]
+      });
       console.log('Seeded site content.');
     }
   } catch (err) {
@@ -82,6 +117,5 @@ const seedData = () => {
   }
 };
 
-seedData();
-
+export { initDb };
 export default db;
