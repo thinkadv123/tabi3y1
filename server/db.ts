@@ -12,13 +12,14 @@ const dbPath = process.env.TURSO_DATABASE_URL
 
 console.log('Database URL:', dbPath);
 
-const db = createClient({
+const db = typeof window === 'undefined' ? createClient({
   url: dbPath,
   authToken: process.env.TURSO_AUTH_TOKEN,
-});
+}) : null;
 
 // Initialize Tables
 const initDb = async () => {
+  if (!db) return;
   try {
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
@@ -63,6 +64,7 @@ const initDb = async () => {
 
 // Seed Initial Data
 const seedData = async () => {
+  if (!db) return;
   try {
     const userCountResult = await db.execute('SELECT COUNT(*) as count FROM users');
     const userCount = userCountResult.rows[0].count as number;
