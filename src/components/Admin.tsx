@@ -58,14 +58,6 @@ const Admin: React.FC<AdminProps> = ({
     if (!productForm.name) return;
     setIsGenerating(true);
     try {
-      // AI generation temporarily disabled due to client-side compatibility issues.
-      // const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      // const response = await ai.models.generateContent({
-      //   model: 'gemini-3-flash-preview',
-      //   contents: `Write a short, enticing description for an organic product named "${productForm.name}". Focus on freshness and health benefits. Max 2 sentences.`,
-      // });
-      // setProductForm(prev => ({ ...prev, description: response.text || '' }));
-      
       // Mock response for now
       await new Promise(resolve => setTimeout(resolve, 1000));
       setProductForm(prev => ({ ...prev, description: `Fresh and organic ${productForm.name}, perfect for your healthy diet. Sustainably sourced and full of flavor.` }));
