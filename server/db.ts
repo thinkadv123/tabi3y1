@@ -11,11 +11,29 @@ let dbInstance: FirebaseFirestore.Firestore | null = null;
 const initFirebase = () => {
   try {
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+      // Robust private key parsing
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      
+      // Remove surrounding quotes if present
+      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+        privateKey = privateKey.substring(1, privateKey.length - 1);
+      } else if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
+        privateKey = privateKey.substring(1, privateKey.length - 1);
+      }
+      
+      // Replace literal \n with actual newlines
+      privateKey = privateKey.replace(/\\n/g, '\n');
+      
+      // Ensure it starts with the header
+      if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        console.error('FIREBASE_PRIVATE_KEY is missing the BEGIN header');
+      }
+
       admin.initializeApp({
         credential: admin.credential.cert({
           projectId: process.env.FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          privateKey: privateKey,
         }),
       });
       dbInstance = admin.firestore();

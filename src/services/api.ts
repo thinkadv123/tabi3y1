@@ -28,8 +28,12 @@ const ensureAuth = async () => {
       const cred = await signInAnonymously(auth);
       user = cred.user;
       console.log('Signed in anonymously:', user.uid);
-    } catch (error) {
-      console.error('Anonymous auth failed. Firestore writes may fail if rules require auth.', error);
+    } catch (error: any) {
+      if (error.code === 'auth/configuration-not-found') {
+        console.error('CRITICAL: Anonymous Authentication is not enabled in your Firebase Console. Please enable it under Authentication > Sign-in method.');
+      } else {
+        console.error('Anonymous auth failed:', error);
+      }
     }
   } else {
     console.log('Already authenticated:', user.uid);
