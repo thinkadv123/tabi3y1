@@ -127,6 +127,51 @@ export const api = {
     }
   },
 
+  // --- Orders ---
+  createOrder: async (order: any): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order)
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      return false;
+    }
+  },
+
+  getOrders: async (token: string): Promise<any[]> => {
+    try {
+      const response = await fetch(`${API_URL}/orders`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch orders');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+      return [];
+    }
+  },
+
+  updateOrderStatus: async (id: string, status: string, token: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_URL}/orders/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      return false;
+    }
+  },
+
   // --- Site Content ---
   getContent: async (): Promise<SiteContent> => {
     try {

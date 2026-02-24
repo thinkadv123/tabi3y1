@@ -130,6 +130,40 @@ app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Orders
+app.get('/api/orders', authenticateToken, async (req, res) => {
+  try {
+    const orders = await db.orders.findAll();
+    res.json(orders);
+  } catch (err) {
+    console.error('Failed to fetch orders:', err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  const order = req.body;
+  try {
+    const newOrder = await db.orders.create(order);
+    res.json(newOrder);
+  } catch (err) {
+    console.error('Failed to create order:', err);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+app.put('/api/orders/:id/status', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    await db.orders.updateStatus(id, status);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to update order status:', err);
+    res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
 // Site Content
 app.get('/api/site', async (req, res) => {
   try {

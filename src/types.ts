@@ -33,4 +33,24 @@ export type SiteContent = {
   };
 };
 
-export type ViewState = 'home' | 'shop' | 'cart' | 'admin' | 'about' | 'contact';
+export type OrderItem = {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+};
+
+export type Order = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerAddress: string;
+  items: OrderItem[];
+  total: number;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered';
+  createdAt: string;
+};
+
+export type ViewState = 'home' | 'shop' | 'cart' | 'admin' | 'about' | 'contact' | 'checkout';

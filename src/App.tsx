@@ -15,6 +15,8 @@ import { INITIAL_SITE_CONTENT } from './data';
 
 import { api } from './services/api';
 
+import Checkout from './components/Checkout';
+
 function App() {
   const [view, setView] = useState<ViewState>('home');
   const [products, setProducts] = useState<Product[]>([]);
@@ -107,8 +109,12 @@ function App() {
   };
 
   const handleCheckout = () => {
+    setView('checkout');
+  };
+
+  const handleOrderSuccess = () => {
     setCart([]);
-    showToast('Order placed successfully! Thank you.');
+    showToast('Order placed successfully! We will contact you soon.');
     setView('home');
   };
 
@@ -294,7 +300,6 @@ function App() {
               </div>
             </motion.div>
           )}
-
           {view === 'cart' && (
             <motion.div
               key="cart"
@@ -311,7 +316,17 @@ function App() {
             </motion.div>
           )}
 
+          {view === 'checkout' && (
+            <Checkout 
+              cart={cart}
+              total={cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+              onSuccess={handleOrderSuccess}
+              onBack={() => setView('cart')}
+            />
+          )}
+
           {view === 'admin' && (
+            // ...
             <motion.div
               key="admin"
               initial={{ opacity: 0 }}

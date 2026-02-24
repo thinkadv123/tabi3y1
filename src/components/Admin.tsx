@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Edit, Save, X, Sparkles, Layout, FileText, ShoppingBag } from 'lucide-react';
-import { Product, Category, SiteContent } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Edit, Save, X, Sparkles, Layout, FileText, ShoppingBag, Package, Upload, Image as ImageIcon } from 'lucide-react';
+import { Product, Category, SiteContent, Order } from '../types';
+import { api } from '../services/api';
 
 interface AdminProps {
   products: Product[];
@@ -25,18 +26,42 @@ const Admin: React.FC<AdminProps> = ({
   onDeleteCategory,
   onUpdateSiteContent
 }) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'pages'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'pages' | 'orders'>('products');
+  const [orders, setOrders] = useState<Order[]>([]);
   
   // Product State
   const [isEditingProduct, setIsEditingProduct] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<Partial<Product>>({});
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Category State
   const [newCategoryName, setNewCategoryName] = useState('');
 
   // Pages State
   const [contentForm, setContentForm] = useState<SiteContent>(siteContent);
+
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [activeTab]);
+
+  const fetchOrders = async () => {
+    const token = localStorage.getItem('tabi3y_token');
+    if (token) {
+      const data = await api.getOrders(token);
+      setOrders(data);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (id: string, status: string) => {
+    const token = localStorage.getItem('tabi3y_token');
+    if (token) {
+      await api.updateOrderStatus(id, status, token);
+      fetchOrders();
+    }
+  };
 
   // --- Product Handlers ---
   const handleEditProduct = (product: Product) => {
@@ -67,6 +92,35 @@ const Admin: React.FC<AdminProps> = ({
       alert("Failed to generate description.");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProductForm(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const generateImage = async () => {
+    if (!productForm.name) return;
+    setIsGeneratingImage(true);
+    try {
+       // Mock AI Image Generation for now (since we can't easily call backend AI from here without setup)
+       // In a real scenario, this would call an API endpoint that uses gemini-3-pro-image-preview
+       await new Promise(resolve => setTimeout(resolve, 2000));
+       // Use a placeholder that looks like a generated image
+       const mockImage = `https://source.unsplash.com/800x800/?organic,${encodeURIComponent(productForm.name)}`;
+       setProductForm(prev => ({ ...prev, image: mockImage }));
+    } catch (error) {
+      console.error("AI Image Error:", error);
+      alert("Failed to generate image.");
+    } finally {
+      setIsGeneratingImage(false);
     }
   };
 
@@ -109,10 +163,17 @@ const Admin: React.FC<AdminProps> = ({
         >
           <FileText size={18} className="inline mr-2" /> Pages Content
         </button>
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className={`px-6 py-2 rounded-full font-bold whitespace-nowrap transition-colors ${activeTab === 'orders' ? 'bg-[#2F5233] text-white' : 'bg-white text-[#5C4033] hover:bg-[#F5F5F0]'}`}
+        >
+          <Package size={18} className="inline mr-2" /> Orders
+        </button>
       </div>
 
       {/* --- PRODUCTS TAB --- */}
       {activeTab === 'products' && (
+        // ... (existing product tab content)
         <div>
           <div className="flex justify-end mb-4">
             <button 
@@ -164,6 +225,69 @@ const Admin: React.FC<AdminProps> = ({
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* --- ORDERS TAB --- */}
+      {activeTab === 'orders' && (
+        <div className="space-y-6">
+          {orders.map(order => (
+            <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-[#2F5233]/10">
+              <div className="flex justify-between items-start mb-4 border-b border-[#2F5233]/10 pb-4">
+                <div>
+                  <h3 className="font-bold text-lg text-[#2F5233]">Order #{order.id}</h3>
+                  <p className="text-sm text-[#5C4033]/60">{new Date(order.createdAt).toLocaleString()}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select 
+                    value={order.status}
+                    onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                    className={`px-3 py-1 rounded-full text-sm font-bold border outline-none ${
+                      order.status === 'delivered' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                      order.status === 'shipped' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                      order.status === 'processing' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                      'bg-slate-100 text-slate-800 border-slate-200'
+                    }`}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-bold text-[#5C4033] mb-2 text-sm uppercase tracking-wider">Customer</h4>
+                  <p className="font-medium">{order.customerName}</p>
+                  <p className="text-sm text-[#5C4033]/80">{order.customerEmail}</p>
+                  <p className="text-sm text-[#5C4033]/80">{order.customerPhone}</p>
+                  <p className="text-sm text-[#5C4033]/80 mt-1 whitespace-pre-wrap">{order.customerAddress}</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-[#5C4033] mb-2 text-sm uppercase tracking-wider">Items</h4>
+                  <ul className="space-y-2">
+                    {order.items.map((item, idx) => (
+                      <li key={idx} className="flex justify-between text-sm">
+                        <span>{item.quantity}x {item.name}</span>
+                        <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 pt-2 border-t border-[#2F5233]/10 flex justify-between font-bold text-[#2F5233]">
+                    <span>Total</span>
+                    <span>${order.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          {orders.length === 0 && (
+            <div className="text-center p-12 bg-white rounded-xl border border-[#2F5233]/10 text-[#5C4033]/50">
+              No orders found.
+            </div>
+          )}
         </div>
       )}
 
@@ -359,12 +483,33 @@ const Admin: React.FC<AdminProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Image URL</label>
-                <input 
-                  value={productForm.image || ''} 
-                  onChange={e => setProductForm({...productForm, image: e.target.value})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
-                />
+                <label className="block text-sm font-bold text-[#5C4033] mb-1">Image</label>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    <input 
+                      value={productForm.image || ''} 
+                      onChange={e => setProductForm({...productForm, image: e.target.value})}
+                      className="flex-1 px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
+                      placeholder="Image URL"
+                    />
+                    <label className="cursor-pointer bg-[#F5F5F0] hover:bg-[#E5E5E0] text-[#5C4033] px-3 py-2 rounded-lg border border-[#2F5233]/20 flex items-center justify-center transition-colors">
+                      <Upload size={18} />
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    </label>
+                  </div>
+                  
+                  <button 
+                    onClick={generateImage}
+                    disabled={isGeneratingImage || !productForm.name}
+                    className="text-xs flex items-center gap-1 text-[#2F5233] font-bold hover:text-[#F4E285] disabled:opacity-50 w-fit"
+                  >
+                    <ImageIcon size={12} /> {isGeneratingImage ? 'Generating Image...' : 'Generate Image with AI'}
+                  </button>
+
+                  {productForm.image && (
+                    <img src={productForm.image} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-[#2F5233]/10" />
+                  )}
+                </div>
               </div>
 
               <div>

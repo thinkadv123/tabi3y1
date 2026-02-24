@@ -9,6 +9,7 @@ let users: any[] = [];
 let products = [...INITIAL_PRODUCTS];
 let categories = [...INITIAL_CATEGORIES];
 let siteContent = { ...INITIAL_SITE_CONTENT };
+let orders: any[] = [];
 
 // Initialize Admin User
 const initAuth = () => {
@@ -51,6 +52,20 @@ export const db = {
     },
     delete: async (id: string) => {
       categories = categories.filter(c => c.id !== id);
+      return true;
+    }
+  },
+  orders: {
+    findAll: async () => orders,
+    create: async (order: any) => {
+      const newOrder = { ...order, id: Date.now().toString(), status: 'pending', createdAt: new Date().toISOString() };
+      orders.push(newOrder);
+      return newOrder;
+    },
+    updateStatus: async (id: string, status: string) => {
+      const idx = orders.findIndex(o => o.id === id);
+      if (idx === -1) return false;
+      orders[idx] = { ...orders[idx], status };
       return true;
     }
   },
