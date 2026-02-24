@@ -31,8 +31,7 @@ app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   console.log('Login attempt for:', username);
   try {
-    const result = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
-    const user = result.rows[0] as any;
+    const user = await db.users.findByUsername(username);
 
     if (!user) {
       console.log('User not found:', username);
@@ -56,8 +55,8 @@ app.post('/api/auth/login', async (req, res) => {
 // Products
 app.get('/api/products', async (req, res) => {
   try {
-    const result = await db.execute('SELECT * FROM products');
-    res.json(result.rows);
+    const products = await db.products.findAll();
+    res.json(products);
   } catch (err) {
     console.error('Failed to fetch products:', err);
     res.status(500).json({ error: 'Failed to fetch products' });
@@ -65,12 +64,9 @@ app.get('/api/products', async (req, res) => {
 });
 
 app.post('/api/products', authenticateToken, async (req, res) => {
-  const { id, name, price, category, image, description, unit } = req.body;
+  const product = req.body;
   try {
-    await db.execute({
-      sql: 'INSERT INTO products (id, name, price, category, image, description, unit) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      args: [id, name, price, category, image, description, unit]
-    });
+    await db.products.create(product);
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to create product:', err);
@@ -80,12 +76,9 @@ app.post('/api/products', authenticateToken, async (req, res) => {
 
 app.put('/api/products/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, price, category, image, description, unit } = req.body;
+  const product = req.body;
   try {
-    await db.execute({
-      sql: 'UPDATE products SET name = ?, price = ?, category = ?, image = ?, description = ?, unit = ? WHERE id = ?',
-      args: [name, price, category, image, description, unit, id]
-    });
+    await db.products.update(id, product);
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to update product:', err);
@@ -96,7 +89,7 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
 app.delete('/api/products/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
-    await db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
+    await db.products.delete(id);
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to delete product:', err);
@@ -107,8 +100,8 @@ app.delete('/api/products/:id', authenticateToken, async (req, res) => {
 // Categories
 app.get('/api/categories', async (req, res) => {
   try {
-    const result = await db.execute('SELECT * FROM categories');
-    res.json(result.rows);
+    const categories = await db.categories.findAll();
+    res.json(categories);
   } catch (err) {
     console.error('Failed to fetch categories:', err);
     res.status(500).json({ error: 'Failed to fetch categories' });
@@ -116,9 +109,9 @@ app.get('/api/categories', async (req, res) => {
 });
 
 app.post('/api/categories', authenticateToken, async (req, res) => {
-  const { id, name } = req.body;
+  const category = req.body;
   try {
-    await db.execute({ sql: 'INSERT INTO categories (id, name) VALUES (?, ?)', args: [id, name] });
+    await db.categories.create(category);
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to create category:', err);
@@ -129,7 +122,7 @@ app.post('/api/categories', authenticateToken, async (req, res) => {
 app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
-    await db.execute({ sql: 'DELETE FROM categories WHERE id = ?', args: [id] });
+    await db.categories.delete(id);
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to delete category:', err);
@@ -140,13 +133,8 @@ app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
 // Site Content
 app.get('/api/site', async (req, res) => {
   try {
-    const result = await db.execute({ sql: 'SELECT value FROM site_content WHERE key = ?', args: ['main'] });
-    const row = result.rows[0] as any;
-    if (row) {
-      res.json(JSON.parse(row.value));
-    } else {
-      res.status(404).json({ error: 'Content not found' });
-    }
+    const content = await db.content.get();
+    res.json(content);
   } catch (err) {
     console.error('Failed to fetch site content:', err);
     res.status(500).json({ error: 'Failed to fetch site content' });
@@ -156,7 +144,7 @@ app.get('/api/site', async (req, res) => {
 app.put('/api/site', authenticateToken, async (req, res) => {
   const content = req.body;
   try {
-    await db.execute({ sql: 'INSERT OR REPLACE INTO site_content (key, value) VALUES (?, ?)', args: ['main', JSON.stringify(content)] });
+    await db.content.update(content);
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to update content:', err);
@@ -167,15 +155,14 @@ app.put('/api/site', authenticateToken, async (req, res) => {
 // Debug DB
 app.get('/api/debug/db', async (req, res) => {
   try {
-    const userCount = (await db.execute('SELECT COUNT(*) as count FROM users')).rows[0].count;
-    const productCount = (await db.execute('SELECT COUNT(*) as count FROM products')).rows[0].count;
-    const categoryCount = (await db.execute('SELECT COUNT(*) as count FROM categories')).rows[0].count;
+    const products = await db.products.findAll();
+    const categories = await db.categories.findAll();
     
     res.json({
-      users: userCount,
-      products: productCount,
-      categories: categoryCount,
-      dbPath: process.env.TURSO_DATABASE_URL ? 'Remote' : 'Local/File'
+      users: 1, // Hardcoded as we know admin exists
+      products: products.length,
+      categories: categories.length,
+      dbPath: 'In-Memory'
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -183,13 +170,7 @@ app.get('/api/debug/db', async (req, res) => {
 });
 
 app.post('/api/debug/seed', async (req, res) => {
-  try {
-    const { initDb } = await import('./db');
-    await initDb();
-    res.json({ success: true, message: 'Database seeded' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json({ success: true, message: 'In-memory DB is auto-seeded.' });
 });
 
 export default app;
