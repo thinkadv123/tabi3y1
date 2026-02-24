@@ -3,6 +3,7 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import db, { initDb } from './db';
 import { createServer as createViteServer } from 'vite';
@@ -100,8 +101,23 @@ async function startServer() {
     app.use(express.static(path.join(__dirname, '../dist')));
     app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../dist/index.html')));
   } else {
-    const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
+    const vite = await createViteServer({ 
+      server: { middlewareMode: true }, 
+      appType: 'custom' 
+    });
     app.use(vite.middlewares);
+    
+    app.get('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = await fs.promises.readFile(path.resolve(__dirname, '../index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   }
   app.listen(PORT, '0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));
 }

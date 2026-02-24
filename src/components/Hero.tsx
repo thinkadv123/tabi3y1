@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import { ArrowRight, Leaf, Bird, ShieldCheck } from 'lucide-react';
 
 interface HeroProps {
@@ -20,11 +19,7 @@ export default function Hero({ onShopNow }: HeroProps) {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-2xl text-white">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
+          <div>
             <span className="inline-block bg-[#F4E285] text-[#2F5233] px-4 py-1 rounded-full text-sm font-bold mb-6 uppercase tracking-wider">
               100% Organic & Fresh
             </span>
@@ -47,7 +42,7 @@ export default function Hero({ onShopNow }: HeroProps) {
                 Our Story
               </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 

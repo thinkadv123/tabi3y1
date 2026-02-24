@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { CartItem } from '../types';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 interface CartProps {
   items: CartItem[];

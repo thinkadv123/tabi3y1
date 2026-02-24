@@ -1,6 +1,27 @@
 import React from 'react';
 import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react';
 
+function ShoppingLeaf(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8a8 8 0 0 1-8 8Z" />
+      <path d="M7 21c-4.3-1.47-6-6.47-6-10" />
+      <path d="M10.5 13C11.5 13.5 12.5 14 13.5 14.5" />
+    </svg>
+  );
+}
+
 export default function Footer() {
   return (
     <footer className="bg-[#2F5233] text-white pt-20 pb-10">
@@ -63,26 +84,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  );
-}
-
-function ShoppingLeaf(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8a8 8 0 0 1-8 8Z" />
-      <path d="M7 21c-4.3-1.47-6-6.47-6-10" />
-      <path d="M10.5 13C11.5 13.5 12.5 14 13.5 14.5" />
-    </svg>
   );
 }

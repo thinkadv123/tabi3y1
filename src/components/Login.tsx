@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, ArrowRight } from 'lucide-react';
 import { api } from '../services/api';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 interface LoginProps {
   onLogin: (token: string) => void;

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Plus, ShoppingCart } from 'lucide-react';
 import { Product } from '../types';
-import { motion } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
@@ -10,8 +9,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, onAdd }: ProductCardProps) {
   return (
-    <motion.div 
-      whileHover={{ y: -10 }}
+    <div 
       className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-[#2F5233]/5 group"
     >
       <div className="relative h-64 overflow-hidden">
@@ -49,6 +47,6 @@ export default function ProductCard({ product, onAdd }: ProductCardProps) {
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

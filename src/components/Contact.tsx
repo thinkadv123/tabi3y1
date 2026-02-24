@@ -1,7 +1,6 @@
 import React from 'react';
 import { PageContent } from '../types';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface ContactProps {
   content: PageContent & {

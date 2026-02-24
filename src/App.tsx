@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import ProductCard from './components/ProductCard';
@@ -42,9 +41,9 @@ function App() {
         api.getCategories(),
         api.getContent()
       ]);
-      setProducts(prods);
-      setCategories(cats);
-      setSiteContent(content);
+      setProducts(prods || []);
+      setCategories(cats || []);
+      setSiteContent(content || INITIAL_SITE_CONTENT);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
@@ -101,42 +100,40 @@ function App() {
       {view !== 'admin' && <Header cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} view={view} setView={setView} />}
       
       <main className="flex-grow">
-        <AnimatePresence mode="wait">
-          {view === 'home' && (
-            <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Hero onShopNow={() => setView('shop')} />
-              <section className="py-20 container mx-auto px-4">
-                <h2 className="text-4xl font-serif font-bold text-[#2F5233] text-center mb-12">Featured Products</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                  {products.slice(0, 4).map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} />)}
-                </div>
-              </section>
-            </motion.div>
-          )}
-
-          {view === 'shop' && (
-            <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container mx-auto px-4 py-12">
-              <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
-                <h2 className="text-4xl font-serif font-bold text-[#2F5233]">Our Market</h2>
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                  <button onClick={() => setSelectedCategory('All')} className={`px-6 py-2 rounded-full ${selectedCategory === 'All' ? 'bg-[#2F5233] text-white' : 'bg-white'}`}>All</button>
-                  {categories.map(cat => (
-                    <button key={cat.id} onClick={() => setSelectedCategory(cat.name)} className={`px-6 py-2 rounded-full ${selectedCategory === cat.name ? 'bg-[#2F5233] text-white' : 'bg-white'}`}>{cat.name}</button>
-                  ))}
-                </div>
-              </div>
+        {view === 'home' && (
+          <div>
+            <Hero onShopNow={() => setView('shop')} />
+            <section className="py-20 container mx-auto px-4">
+              <h2 className="text-4xl font-serif font-bold text-[#2F5233] text-center mb-12">Featured Products</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {filteredProducts.map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} />)}
+                {products.slice(0, 4).map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} />)}
               </div>
-            </motion.div>
-          )}
+            </section>
+          </div>
+        )}
 
-          {view === 'cart' && <Cart items={cart} onUpdateQuantity={updateCartQuantity} onRemove={removeFromCart} onCheckout={() => setView('checkout')} />}
-          {view === 'checkout' && <Checkout cart={cart} total={cart.reduce((s, i) => s + i.price * i.quantity, 0)} onSuccess={handleOrderSuccess} onBack={() => setView('cart')} />}
-          {view === 'about' && <About content={siteContent.about} />}
-          {view === 'contact' && <Contact content={siteContent.contact} />}
-          {view === 'admin' && (authToken ? <Admin products={products} categories={categories} siteContent={siteContent} onLogout={handleLogout} refreshData={fetchData} token={authToken} /> : <Login onLogin={handleLogin} />)}
-        </AnimatePresence>
+        {view === 'shop' && (
+          <div className="container mx-auto px-4 py-12">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
+              <h2 className="text-4xl font-serif font-bold text-[#2F5233]">Our Market</h2>
+              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <button onClick={() => setSelectedCategory('All')} className={`px-6 py-2 rounded-full ${selectedCategory === 'All' ? 'bg-[#2F5233] text-white' : 'bg-white'}`}>All</button>
+                {categories.map(cat => (
+                  <button key={cat.id} onClick={() => setSelectedCategory(cat.name)} className={`px-6 py-2 rounded-full ${selectedCategory === cat.name ? 'bg-[#2F5233] text-white' : 'bg-white'}`}>{cat.name}</button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {filteredProducts.map(p => <ProductCard key={p.id} product={p} onAdd={addToCart} />)}
+            </div>
+          </div>
+        )}
+
+        {view === 'cart' && <Cart key="cart" items={cart} onUpdateQuantity={updateCartQuantity} onRemove={removeFromCart} onCheckout={() => setView('checkout')} />}
+        {view === 'checkout' && <Checkout key="checkout" cart={cart} total={cart.reduce((s, i) => s + i.price * i.quantity, 0)} onSuccess={handleOrderSuccess} onBack={() => setView('cart')} />}
+        {view === 'about' && <About key="about" content={siteContent.about} />}
+        {view === 'contact' && <Contact key="contact" content={siteContent.contact} />}
+        {view === 'admin' && (authToken ? <Admin key="admin" products={products} categories={categories} siteContent={siteContent} onLogout={handleLogout} refreshData={fetchData} token={authToken} /> : <Login key="login" onLogin={handleLogin} />)}
       </main>
 
       {view !== 'admin' && <Footer />}

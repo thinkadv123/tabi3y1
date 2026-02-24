@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { CartItem } from '../types';
 import { api } from '../services/api';
 import { ShoppingBag, ArrowRight, CheckCircle } from 'lucide-react';

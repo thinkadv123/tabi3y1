@@ -1,6 +1,6 @@
 import React from 'react';
 import { PageContent } from '../types';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Leaf, Bird, Home } from 'lucide-react';
 
 interface AboutProps {

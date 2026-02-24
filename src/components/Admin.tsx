@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit, Save, X, Layout, FileText, ShoppingBag, Package, Database, LogOut } from 'lucide-react';
 import { Product, Category, SiteContent, Order } from '../types';
 import { api } from '../services/api';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 interface AdminProps {
   products: Product[];
