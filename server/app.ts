@@ -164,4 +164,32 @@ app.put('/api/site', authenticateToken, async (req, res) => {
   }
 });
 
+// Debug DB
+app.get('/api/debug/db', async (req, res) => {
+  try {
+    const userCount = (await db.execute('SELECT COUNT(*) as count FROM users')).rows[0].count;
+    const productCount = (await db.execute('SELECT COUNT(*) as count FROM products')).rows[0].count;
+    const categoryCount = (await db.execute('SELECT COUNT(*) as count FROM categories')).rows[0].count;
+    
+    res.json({
+      users: userCount,
+      products: productCount,
+      categories: categoryCount,
+      dbPath: process.env.TURSO_DATABASE_URL ? 'Remote' : 'Local/File'
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/debug/seed', async (req, res) => {
+  try {
+    const { initDb } = await import('./db');
+    await initDb();
+    res.json({ success: true, message: 'Database seeded' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default app;
