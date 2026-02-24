@@ -147,21 +147,12 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   const order = req.body;
   try {
-    // Basic validation
     if (!order.items || order.items.length === 0) {
       return res.status(400).json({ error: 'Order must have items' });
     }
     
-    // Add server-side fields
-    const newOrder = {
-      ...order,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      status: 'pending'
-    };
-
-    await db.orders.create(newOrder);
-    res.json({ success: true, orderId: newOrder.id });
+    const newOrder = await db.orders.create(order);
+    res.json(newOrder);
   } catch (err) {
     console.error('Failed to create order:', err);
     res.status(500).json({ error: 'Failed to create order' });

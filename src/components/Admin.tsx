@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit, Save, X, Sparkles, Layout, FileText, ShoppingBag, Package, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, X, Sparkles, Layout, FileText, ShoppingBag, Package, Upload, Image as ImageIcon, Database } from 'lucide-react';
 import { Product, Category, SiteContent, Order } from '../types';
 import { api } from '../services/api';
 
@@ -137,10 +137,28 @@ const Admin: React.FC<AdminProps> = ({
     alert('Site content updated successfully!');
   };
 
+  const handleSeedDatabase = async () => {
+    if (confirm('Are you sure you want to seed the database? This will add initial data if collections are empty.')) {
+      const success = await api.seedDatabase();
+      if (success) {
+        alert('Database seeded successfully! Please refresh the page.');
+        window.location.reload();
+      } else {
+        alert('Failed to seed database. Check console for details.');
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <h2 className="text-3xl font-serif font-bold text-[#2F5233]">Admin Dashboard</h2>
+        <button
+          onClick={handleSeedDatabase}
+          className="bg-[#5C4033] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#2F5233] transition-colors shadow-sm text-sm"
+        >
+          <Database size={16} /> Seed Database
+        </button>
       </div>
 
       {/* Tabs */}
