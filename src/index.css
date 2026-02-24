@@ -1,31 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
-  
-  --color-primary: #2F5233; /* Deep Forest Green */
-  --color-secondary: #B1D8B7; /* Soft Sage */
-  --color-accent: #F4E285; /* Warm Sun */
-  --color-earth: #5C4033; /* Dark Earth */
-  --color-sand: #F5F5F0; /* Off-white Sand */
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
 }
 
-body {
-  background-color: var(--color-sand);
-  color: var(--color-earth);
-  font-family: var(--font-sans);
+@layer base {
+  body {
+    @apply bg-[#F5F5F0] text-[#5C4033] font-sans;
+  }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-.fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

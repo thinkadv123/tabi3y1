@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, X } from 'lucide-react';
 
 interface ToastProps {
   message: string | null;
@@ -8,7 +8,7 @@ interface ToastProps {
   onClose: () => void;
 }
 
-const Toast: React.FC<ToastProps> = ({ message, type = 'success', onClose }) => {
+export default function Toast({ message, type = 'success', onClose }: ToastProps) {
   useEffect(() => {
     if (message) {
       const timer = setTimeout(onClose, 3000);
@@ -23,16 +23,22 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'success', onClose }) => 
           initial={{ opacity: 0, y: 50, x: '-50%' }}
           animate={{ opacity: 1, y: 0, x: '-50%' }}
           exit={{ opacity: 0, y: 20, x: '-50%' }}
-          className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg flex items-center gap-3 ${
-            type === 'success' ? 'bg-[#2F5233] text-white' : 'bg-rose-500 text-white'
-          }`}
+          className="fixed bottom-8 left-1/2 z-[100] w-full max-w-sm px-4"
         >
-          {type === 'success' ? <CheckCircle size={20} /> : <XCircle size={20} />}
-          <span className="font-medium">{message}</span>
+          <div className={`
+            flex items-center gap-4 p-4 rounded-2xl shadow-2xl border backdrop-blur-md
+            ${type === 'success' 
+              ? 'bg-emerald-50/90 border-emerald-200 text-emerald-800' 
+              : 'bg-rose-50/90 border-rose-200 text-rose-800'}
+          `}>
+            {type === 'success' ? <CheckCircle className="shrink-0" /> : <XCircle className="shrink-0" />}
+            <p className="font-bold text-sm flex-grow">{message}</p>
+            <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-lg transition-colors">
+              <X size={16} />
+            </button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
-};
-
-export default Toast;
+}

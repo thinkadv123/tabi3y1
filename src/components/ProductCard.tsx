@@ -1,75 +1,54 @@
 import React from 'react';
-import { ShoppingBag, Star, Plus } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Plus, ShoppingCart } from 'lucide-react';
 import { Product } from '../types';
+import { motion } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
   onAdd: (product: Product) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd }) => {
+export default function ProductCard({ product, onAdd }: ProductCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-[#2F5233]/5"
+    <motion.div 
+      whileHover={{ y: -10 }}
+      className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-[#2F5233]/5 group"
     >
-      <div className="relative aspect-square overflow-hidden bg-[#F5F5F0]">
-        <img
-          src={product.image}
-          alt={product.name}
+      <div className="relative h-64 overflow-hidden">
+        <img 
+          src={product.image} 
+          alt={product.name} 
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button 
-            onClick={() => onAdd(product)}
-            className="text-[#2F5233] hover:text-[#F4E285] transition-colors"
-          >
-            <Plus size={20} />
-          </button>
+        <div className="absolute top-4 left-4">
+          <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#2F5233]">
+            {product.category}
+          </span>
         </div>
-        <div className="absolute bottom-4 left-4 bg-[#2F5233] text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-          {product.category}
-        </div>
+        <button 
+          onClick={() => onAdd(product)}
+          className="absolute bottom-4 right-4 bg-[#2F5233] text-white p-3 rounded-2xl shadow-lg translate-y-20 group-hover:translate-y-0 transition-transform duration-300 hover:bg-[#5C4033]"
+        >
+          <Plus size={20} />
+        </button>
       </div>
-
+      
       <div className="p-6">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-serif font-bold text-xl text-[#2F5233] leading-tight group-hover:text-[#5C4033] transition-colors">
-            {product.name}
-          </h3>
-          <div className="flex items-center gap-1 text-[#F4E285]">
-            <Star size={14} fill="currentColor" />
-            <span className="text-xs font-bold text-[#5C4033]">4.8</span>
-          </div>
+          <h3 className="text-xl font-serif font-bold text-[#2F5233]">{product.name}</h3>
+          <span className="text-lg font-bold text-[#2F5233]">${product.price.toFixed(2)}</span>
         </div>
-        
-        <p className="text-[#5C4033]/70 text-sm mb-4 line-clamp-2 h-10">
-          {product.description}
-        </p>
-
-        <div className="flex items-center justify-between pt-4 border-t border-[#2F5233]/10">
-          <div className="flex flex-col">
-            <span className="text-xs text-[#5C4033]/50 uppercase font-bold tracking-wider">Price</span>
-            <span className="text-lg font-bold text-[#2F5233]">
-              EGP {product.price.toFixed(2)}
-              <span className="text-xs font-normal text-[#5C4033]/50 ml-1">/{product.unit}</span>
-            </span>
-          </div>
-          
-          <button
+        <p className="text-[#5C4033]/60 text-sm mb-4 line-clamp-2">{product.description}</p>
+        <div className="flex justify-between items-center">
+          <span className="text-xs font-medium text-[#5C4033]/40 uppercase tracking-widest">Per {product.unit}</span>
+          <button 
             onClick={() => onAdd(product)}
-            className="bg-[#F5F5F0] hover:bg-[#2F5233] hover:text-white text-[#2F5233] px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 group/btn"
+            className="text-[#2F5233] font-bold text-sm flex items-center gap-1 hover:underline"
           >
-            Add to Cart
-            <ShoppingBag size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+            <ShoppingCart size={14} /> Add to Cart
           </button>
         </div>
       </div>
     </motion.div>
   );
-};
-
-export default ProductCard;
+}

@@ -1,565 +1,267 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit, Save, X, Sparkles, Layout, FileText, ShoppingBag, Package, Upload, Image as ImageIcon, Database } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, X, Layout, FileText, ShoppingBag, Package, Database, LogOut } from 'lucide-react';
 import { Product, Category, SiteContent, Order } from '../types';
 import { api } from '../services/api';
+import { motion } from 'motion/react';
 
 interface AdminProps {
   products: Product[];
   categories: Category[];
   siteContent: SiteContent;
-  onAddProduct: (product: Product) => void;
-  onUpdateProduct: (product: Product) => void;
-  onDeleteProduct: (id: string) => void;
-  onAddCategory: (category: Category) => void;
-  onDeleteCategory: (id: string) => void;
-  onUpdateSiteContent: (content: SiteContent) => void;
+  onLogout: () => void;
+  refreshData: () => void;
+  token: string;
 }
 
-const Admin: React.FC<AdminProps> = ({ 
-  products, 
-  categories, 
-  siteContent,
-  onAddProduct, 
-  onUpdateProduct, 
-  onDeleteProduct,
-  onAddCategory,
-  onDeleteCategory,
-  onUpdateSiteContent
-}) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'pages' | 'orders'>('products');
+export default function Admin({ products, categories, siteContent, onLogout, refreshData, token }: AdminProps) {
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'orders' | 'content'>('products');
   const [orders, setOrders] = useState<Order[]>([]);
-  
-  // Product State
-  const [isEditingProduct, setIsEditingProduct] = useState<string | null>(null);
-  const [productForm, setProductForm] = useState<Partial<Product>>({});
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-
-  // Category State
-  const [newCategoryName, setNewCategoryName] = useState('');
-
-  // Pages State
-  const [contentForm, setContentForm] = useState<SiteContent>(siteContent);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [contentForm, setContentForm] = useState(siteContent);
 
   useEffect(() => {
-    if (activeTab === 'orders') {
-      fetchOrders();
-    }
+    if (activeTab === 'orders') fetchOrders();
   }, [activeTab]);
 
   const fetchOrders = async () => {
-    const token = localStorage.getItem('tabi3y_token');
-    if (token) {
-      const data = await api.getOrders(token);
-      setOrders(data);
+    const data = await api.getOrders(token);
+    setOrders(data);
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const productData = {
+      name: formData.get('name') as string,
+      price: parseFloat(formData.get('price') as string),
+      description: formData.get('description') as string,
+      image: formData.get('image') as string,
+      category: formData.get('category') as string,
+      unit: formData.get('unit') as string,
+    } as Product;
+
+    if (editingProduct) {
+      await api.updateProduct({ ...productData, id: editingProduct.id }, token);
+    } else {
+      await api.saveProduct(productData, token);
+    }
+    
+    setEditingProduct(null);
+    setIsAddingProduct(false);
+    refreshData();
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (confirm('Delete this product?')) {
+      await api.deleteProduct(id, token);
+      refreshData();
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (newCategory) {
+      await api.saveCategory({ id: '', name: newCategory }, token);
+      setNewCategory('');
+      refreshData();
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (confirm('Delete this category?')) {
+      await api.deleteCategory(id, token);
+      refreshData();
     }
   };
 
   const handleUpdateOrderStatus = async (id: string, status: string) => {
-    const token = localStorage.getItem('tabi3y_token');
-    if (token) {
-      await api.updateOrderStatus(id, status, token);
-      fetchOrders();
-    }
-  };
-
-  // --- Product Handlers ---
-  const handleEditProduct = (product: Product) => {
-    setIsEditingProduct(product.id);
-    setProductForm(product);
-  };
-
-  const handleSaveProduct = () => {
-    if (productForm.id) {
-      onUpdateProduct(productForm as Product);
-    } else {
-      onAddProduct({ ...productForm, id: Date.now().toString() } as Product);
-    }
-    setIsEditingProduct(null);
-    setProductForm({});
-  };
-
-  const generateDescription = async () => {
-    if (!productForm.name) return;
-    setIsGenerating(true);
-    try {
-      // Mock response for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setProductForm(prev => ({ ...prev, description: `Fresh and organic ${productForm.name}, perfect for your healthy diet. Sustainably sourced and full of flavor.` }));
-      
-    } catch (error) {
-      console.error("AI Error:", error);
-      alert("Failed to generate description.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProductForm(prev => ({ ...prev, image: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const generateImage = async () => {
-    if (!productForm.name) return;
-    setIsGeneratingImage(true);
-    try {
-       // Mock AI Image Generation for now (since we can't easily call backend AI from here without setup)
-       // In a real scenario, this would call an API endpoint that uses gemini-3-pro-image-preview
-       await new Promise(resolve => setTimeout(resolve, 2000));
-       // Use a placeholder that looks like a generated image
-       const mockImage = `https://source.unsplash.com/800x800/?organic,${encodeURIComponent(productForm.name)}`;
-       setProductForm(prev => ({ ...prev, image: mockImage }));
-    } catch (error) {
-      console.error("AI Image Error:", error);
-      alert("Failed to generate image.");
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  };
-
-  // --- Category Handlers ---
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim()) return;
-    onAddCategory({ id: Date.now().toString(), name: newCategoryName });
-    setNewCategoryName('');
-  };
-
-  // --- Page Content Handlers ---
-  const handleSaveContent = () => {
-    onUpdateSiteContent(contentForm);
-    alert('Site content updated successfully!');
-  };
-
-  const handleSeedDatabase = async () => {
-    if (confirm('Are you sure you want to seed the database? This will add initial data if collections are empty.')) {
-      const success = await api.seedDatabase();
-      if (success) {
-        alert('Database seeded successfully! Please refresh the page.');
-        window.location.reload();
-      } else {
-        alert('Failed to seed database. Check console for details.');
-      }
-    }
+    await api.updateOrderStatus(id, status, token);
+    fetchOrders();
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h2 className="text-3xl font-serif font-bold text-[#2F5233]">Admin Dashboard</h2>
-        <button
-          onClick={handleSeedDatabase}
-          className="bg-[#5C4033] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#2F5233] transition-colors shadow-sm text-sm"
-        >
-          <Database size={16} /> Seed Database
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-        <button 
-          onClick={() => setActiveTab('products')}
-          className={`px-6 py-2 rounded-full font-bold whitespace-nowrap transition-colors ${activeTab === 'products' ? 'bg-[#2F5233] text-white' : 'bg-white text-[#5C4033] hover:bg-[#F5F5F0]'}`}
-        >
-          <ShoppingBag size={18} className="inline mr-2" /> Products
-        </button>
-        <button 
-          onClick={() => setActiveTab('categories')}
-          className={`px-6 py-2 rounded-full font-bold whitespace-nowrap transition-colors ${activeTab === 'categories' ? 'bg-[#2F5233] text-white' : 'bg-white text-[#5C4033] hover:bg-[#F5F5F0]'}`}
-        >
-          <Layout size={18} className="inline mr-2" /> Categories
-        </button>
-        <button 
-          onClick={() => setActiveTab('pages')}
-          className={`px-6 py-2 rounded-full font-bold whitespace-nowrap transition-colors ${activeTab === 'pages' ? 'bg-[#2F5233] text-white' : 'bg-white text-[#5C4033] hover:bg-[#F5F5F0]'}`}
-        >
-          <FileText size={18} className="inline mr-2" /> Pages Content
-        </button>
-        <button 
-          onClick={() => setActiveTab('orders')}
-          className={`px-6 py-2 rounded-full font-bold whitespace-nowrap transition-colors ${activeTab === 'orders' ? 'bg-[#2F5233] text-white' : 'bg-white text-[#5C4033] hover:bg-[#F5F5F0]'}`}
-        >
-          <Package size={18} className="inline mr-2" /> Orders
-        </button>
-      </div>
-
-      {/* --- PRODUCTS TAB --- */}
-      {activeTab === 'products' && (
-        // ... (existing product tab content)
-        <div>
-          <div className="flex justify-end mb-4">
-            <button 
-              onClick={() => {
-                setIsEditingProduct('new');
-                setProductForm({ category: categories[0]?.name || 'Vegetables', image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&q=80&w=800' });
-              }}
-              className="bg-[#2F5233] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#5C4033] transition-colors shadow-sm"
-            >
-              <Plus size={20} /> Add Product
-            </button>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-[#2F5233]/10 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
-                <thead className="bg-[#F5F5F0] text-[#5C4033] font-bold">
-                  <tr>
-                    <th className="p-4">Product</th>
-                    <th className="p-4">Category</th>
-                    <th className="p-4">Price</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#2F5233]/5">
-                  {products.map(product => (
-                    <tr key={product.id} className="hover:bg-[#F5F5F0]/50 transition-colors">
-                      <td className="p-4 flex items-center gap-4">
-                        <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover bg-[#F5F5F0]" />
-                        <div>
-                          <div className="font-bold text-[#2F5233]">{product.name}</div>
-                          <div className="text-xs text-[#5C4033]/60 truncate max-w-[150px] md:max-w-[300px]">{product.description}</div>
-                        </div>
-                      </td>
-                      <td className="p-4 text-[#5C4033]">{product.category}</td>
-                      <td className="p-4 font-bold text-[#2F5233]">EGP {product.price.toFixed(2)}</td>
-                      <td className="p-4 text-right space-x-2">
-                        <button onClick={() => handleEditProduct(product)} className="text-[#2F5233] hover:text-[#F4E285] transition-colors p-1"><Edit size={18} /></button>
-                        <button onClick={() => onDeleteProduct(product.id)} className="text-[#5C4033]/40 hover:text-rose-500 transition-colors p-1"><Trash2 size={18} /></button>
-                      </td>
-                    </tr>
-                  ))}
-                  {products.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="p-8 text-center text-[#5C4033]/50">No products found.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#F5F5F0]">
+      <div className="bg-[#2F5233] text-white p-6 flex justify-between items-center shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="bg-white/20 p-2 rounded-lg"><Layout size={24} /></div>
+          <h1 className="text-2xl font-serif font-bold">Admin Dashboard</h1>
         </div>
-      )}
+        <button onClick={onLogout} className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl hover:bg-white/20 transition-all">
+          <LogOut size={18} /> Logout
+        </button>
+      </div>
 
-      {/* --- ORDERS TAB --- */}
-      {activeTab === 'orders' && (
-        <div className="space-y-6">
-          {orders.map(order => (
-            <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-[#2F5233]/10">
-              <div className="flex justify-between items-start mb-4 border-b border-[#2F5233]/10 pb-4">
-                <div>
-                  <h3 className="font-bold text-lg text-[#2F5233]">Order #{order.id}</h3>
-                  <p className="text-sm text-[#5C4033]/60">{new Date(order.createdAt).toLocaleString()}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select 
-                    value={order.status}
-                    onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                    className={`px-3 py-1 rounded-full text-sm font-bold border outline-none ${
-                      order.status === 'delivered' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                      order.status === 'shipped' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                      order.status === 'processing' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                      'bg-slate-100 text-slate-800 border-slate-200'
-                    }`}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-bold text-[#5C4033] mb-2 text-sm uppercase tracking-wider">Customer</h4>
-                  <p className="font-medium">{order.customerName}</p>
-                  <p className="text-sm text-[#5C4033]/80">{order.customerEmail}</p>
-                  <p className="text-sm text-[#5C4033]/80">{order.customerPhone}</p>
-                  <p className="text-sm text-[#5C4033]/80 mt-1 whitespace-pre-wrap">{order.customerAddress}</p>
-                </div>
-                <div>
-                  <h4 className="font-bold text-[#5C4033] mb-2 text-sm uppercase tracking-wider">Items</h4>
-                  <ul className="space-y-2">
-                    {order.items.map((item, idx) => (
-                      <li key={idx} className="flex justify-between text-sm">
-                        <span>{item.quantity}x {item.name}</span>
-                        <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-4 pt-2 border-t border-[#2F5233]/10 flex justify-between font-bold text-[#2F5233]">
-                    <span>Total</span>
-                    <span>${order.total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex gap-4 mb-12 overflow-x-auto pb-2 no-scrollbar">
+          {[
+            { id: 'products', label: 'Products', icon: Package },
+            { id: 'categories', label: 'Categories', icon: Database },
+            { id: 'orders', label: 'Orders', icon: ShoppingBag },
+            { id: 'content', label: 'Site Content', icon: FileText },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${
+                activeTab === tab.id ? 'bg-[#2F5233] text-white shadow-lg' : 'bg-white text-[#5C4033] hover:bg-white/80'
+              }`}
+            >
+              <tab.icon size={18} /> {tab.label}
+            </button>
           ))}
-          {orders.length === 0 && (
-            <div className="text-center p-12 bg-white rounded-xl border border-[#2F5233]/10 text-[#5C4033]/50">
-              No orders found.
+        </div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-sm p-8 border border-[#2F5233]/5">
+          {activeTab === 'products' && (
+            <div>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-serif font-bold text-[#2F5233]">Manage Products</h2>
+                <button onClick={() => setIsAddingProduct(true)} className="bg-[#2F5233] text-white px-6 py-2 rounded-xl flex items-center gap-2 font-bold hover:bg-[#5C4033] transition-all">
+                  <Plus size={18} /> Add Product
+                </button>
+              </div>
+
+              {(isAddingProduct || editingProduct) && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <form onSubmit={handleSaveProduct} className="bg-white p-8 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto no-scrollbar">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-2xl font-serif font-bold text-[#2F5233]">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+                      <button type="button" onClick={() => { setEditingProduct(null); setIsAddingProduct(false); }}><X /></button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <label className="block text-sm font-bold">Product Name</label>
+                        <input name="name" defaultValue={editingProduct?.name} required className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50" />
+                        <label className="block text-sm font-bold">Price ($)</label>
+                        <input name="price" type="number" step="0.01" defaultValue={editingProduct?.price} required className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50" />
+                        <label className="block text-sm font-bold">Unit (e.g. kg, piece)</label>
+                        <input name="unit" defaultValue={editingProduct?.unit} required className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50" />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="block text-sm font-bold">Category</label>
+                        <select name="category" defaultValue={editingProduct?.category} className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50">
+                          {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                        <label className="block text-sm font-bold">Image URL</label>
+                        <input name="image" defaultValue={editingProduct?.image} required className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50" />
+                        <label className="block text-sm font-bold">Description</label>
+                        <textarea name="description" defaultValue={editingProduct?.description} rows={3} className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50 resize-none" />
+                      </div>
+                    </div>
+                    <button type="submit" className="w-full bg-[#2F5233] text-white py-4 rounded-xl font-bold mt-8 hover:bg-[#5C4033] transition-all">
+                      {editingProduct ? 'Update Product' : 'Save Product'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {products.map(p => (
+                  <div key={p.id} className="flex items-center gap-4 p-4 border border-[#F5F5F0] rounded-2xl hover:bg-[#F5F5F0]/30 transition-all">
+                    <img src={p.image} className="w-20 h-20 object-cover rounded-xl" />
+                    <div className="flex-grow">
+                      <h4 className="font-bold text-[#2F5233]">{p.name}</h4>
+                      <p className="text-sm text-[#5C4033]/60">${p.price.toFixed(2)} / {p.unit}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditingProduct(p)} className="p-2 text-[#2F5233] hover:bg-[#2F5233]/10 rounded-lg"><Edit size={18} /></button>
+                      <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg"><Trash2 size={18} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* --- CATEGORIES TAB --- */}
-      {activeTab === 'categories' && (
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#2F5233]/10 mb-6">
-            <h3 className="font-bold text-lg text-[#2F5233] mb-4">Add New Category</h3>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Category Name"
-                className="flex-grow px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
-              />
-              <button 
-                onClick={handleAddCategory}
-                className="bg-[#2F5233] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#5C4033] transition-colors"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-[#2F5233]/10 overflow-hidden">
-            <ul className="divide-y divide-[#2F5233]/5">
-              {categories.map(category => (
-                <li key={category.id} className="p-4 flex justify-between items-center hover:bg-[#F5F5F0]/50">
-                  <span className="font-medium text-[#5C4033]">{category.name}</span>
-                  <button 
-                    onClick={() => onDeleteCategory(category.id)}
-                    className="text-[#5C4033]/40 hover:text-rose-500 transition-colors p-2"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </li>
-              ))}
-              {categories.length === 0 && (
-                <li className="p-8 text-center text-[#5C4033]/50">No categories found.</li>
-              )}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* --- PAGES TAB --- */}
-      {activeTab === 'pages' && (
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* About Page Editor */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#2F5233]/10">
-            <h3 className="font-serif font-bold text-2xl text-[#2F5233] mb-6 border-b border-[#2F5233]/10 pb-2">About Page</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Main Title</label>
-                <input 
-                  value={contentForm.about.title}
-                  onChange={(e) => setContentForm({...contentForm, about: {...contentForm.about, title: e.target.value}})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233]"
-                />
+          {activeTab === 'categories' && (
+            <div className="max-w-xl">
+              <h2 className="text-2xl font-serif font-bold text-[#2F5233] mb-8">Manage Categories</h2>
+              <div className="flex gap-4 mb-8">
+                <input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="New category name" className="flex-grow p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50" />
+                <button onClick={handleAddCategory} className="bg-[#2F5233] text-white px-6 rounded-xl font-bold hover:bg-[#5C4033] transition-all">Add</button>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Main Content</label>
-                <textarea 
-                  value={contentForm.about.content}
-                  onChange={(e) => setContentForm({...contentForm, about: {...contentForm.about, content: e.target.value}})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233] h-32"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Hero Image URL</label>
-                <input 
-                  value={contentForm.about.image}
-                  onChange={(e) => setContentForm({...contentForm, about: {...contentForm.about, image: e.target.value}})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Page Editor */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#2F5233]/10">
-            <h3 className="font-serif font-bold text-2xl text-[#2F5233] mb-6 border-b border-[#2F5233]/10 pb-2">Contact Page</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Title</label>
-                <input 
-                  value={contentForm.contact.title}
-                  onChange={(e) => setContentForm({...contentForm, contact: {...contentForm.contact, title: e.target.value}})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Intro Text</label>
-                <textarea 
-                  value={contentForm.contact.content}
-                  onChange={(e) => setContentForm({...contentForm, contact: {...contentForm.contact, content: e.target.value}})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233] h-24"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-[#5C4033] mb-1">Email</label>
-                  <input 
-                    value={contentForm.contact.email}
-                    onChange={(e) => setContentForm({...contentForm, contact: {...contentForm.contact, email: e.target.value}})}
-                    className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-[#5C4033] mb-1">Phone</label>
-                  <input 
-                    value={contentForm.contact.phone}
-                    onChange={(e) => setContentForm({...contentForm, contact: {...contentForm.contact, phone: e.target.value}})}
-                    className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233]"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-[#5C4033] mb-1">Address</label>
-                  <input 
-                    value={contentForm.contact.address}
-                    onChange={(e) => setContentForm({...contentForm, contact: {...contentForm.contact, address: e.target.value}})}
-                    className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg outline-none focus:border-[#2F5233]"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <button 
-              onClick={handleSaveContent}
-              className="bg-[#2F5233] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#5C4033] transition-colors flex items-center gap-2 shadow-lg"
-            >
-              <Save size={20} /> Save All Changes
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Product Modal */}
-      {isEditingProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden my-8">
-            <div className="p-6 border-b border-[#2F5233]/10 flex justify-between items-center bg-[#F5F5F0]">
-              <h3 className="font-serif font-bold text-xl text-[#2F5233]">{isEditingProduct === 'new' ? 'Add New Product' : 'Edit Product'}</h3>
-              <button onClick={() => setIsEditingProduct(null)}><X size={24} className="text-[#5C4033]" /></button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Name</label>
-                <input 
-                  value={productForm.name || ''} 
-                  onChange={e => setProductForm({...productForm, name: e.target.value})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
-                  placeholder="e.g. Organic Kale"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-[#5C4033] mb-1">Price (EGP)</label>
-                  <input 
-                    type="number" 
-                    value={productForm.price || ''} 
-                    onChange={e => setProductForm({...productForm, price: parseFloat(e.target.value)})}
-                    className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-[#5C4033] mb-1">Unit</label>
-                  <input 
-                    value={productForm.unit || ''} 
-                    onChange={e => setProductForm({...productForm, unit: e.target.value})}
-                    className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
-                    placeholder="e.g. kg, bunch"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Category</label>
-                <select 
-                  value={productForm.category || categories[0]?.name} 
-                  onChange={e => setProductForm({...productForm, category: e.target.value})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
-                >
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.name}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-[#5C4033] mb-1">Image</label>
-                <div className="flex flex-col gap-3">
-                  <div className="flex gap-2">
-                    <input 
-                      value={productForm.image || ''} 
-                      onChange={e => setProductForm({...productForm, image: e.target.value})}
-                      className="flex-1 px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none"
-                      placeholder="Image URL"
-                    />
-                    <label className="cursor-pointer bg-[#F5F5F0] hover:bg-[#E5E5E0] text-[#5C4033] px-3 py-2 rounded-lg border border-[#2F5233]/20 flex items-center justify-center transition-colors">
-                      <Upload size={18} />
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                    </label>
+              <div className="space-y-3">
+                {categories.map(c => (
+                  <div key={c.id} className="flex justify-between items-center p-4 bg-[#F5F5F0]/30 rounded-xl">
+                    <span className="font-bold text-[#2F5233]">{c.name}</span>
+                    <button onClick={() => handleDeleteCategory(c.id)} className="text-rose-500 hover:text-rose-700"><Trash2 size={18} /></button>
                   </div>
-                  
-                  <button 
-                    onClick={generateImage}
-                    disabled={isGeneratingImage || !productForm.name}
-                    className="text-xs flex items-center gap-1 text-[#2F5233] font-bold hover:text-[#F4E285] disabled:opacity-50 w-fit"
-                  >
-                    <ImageIcon size={12} /> {isGeneratingImage ? 'Generating Image...' : 'Generate Image with AI'}
-                  </button>
-
-                  {productForm.image && (
-                    <img src={productForm.image} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-[#2F5233]/10" />
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-sm font-bold text-[#5C4033]">Description</label>
-                  <button 
-                    onClick={generateDescription} 
-                    disabled={isGenerating || !productForm.name}
-                    className="text-xs flex items-center gap-1 text-[#2F5233] font-bold hover:text-[#F4E285] disabled:opacity-50"
-                  >
-                    <Sparkles size={12} /> {isGenerating ? 'Generating...' : 'Generate with AI'}
-                  </button>
-                </div>
-                <textarea 
-                  value={productForm.description || ''} 
-                  onChange={e => setProductForm({...productForm, description: e.target.value})}
-                  className="w-full px-4 py-2 border border-[#2F5233]/20 rounded-lg focus:ring-2 focus:ring-[#2F5233] outline-none h-24 resize-none"
-                />
+                ))}
               </div>
             </div>
+          )}
 
-            <div className="p-6 bg-[#F5F5F0] flex justify-end gap-3">
-              <button onClick={() => setIsEditingProduct(null)} className="px-6 py-2 text-[#5C4033] font-bold hover:text-[#2F5233]">Cancel</button>
-              <button onClick={handleSaveProduct} className="px-6 py-2 bg-[#2F5233] text-white font-bold rounded-lg hover:bg-[#5C4033] flex items-center gap-2">
-                <Save size={18} /> Save Product
-              </button>
+          {activeTab === 'orders' && (
+            <div>
+              <h2 className="text-2xl font-serif font-bold text-[#2F5233] mb-8">Recent Orders</h2>
+              <div className="overflow-x-auto no-scrollbar">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-[#5C4033]/40 text-xs uppercase tracking-widest border-b border-[#F5F5F0]">
+                      <th className="pb-4 font-bold">Customer</th>
+                      <th className="pb-4 font-bold">Items</th>
+                      <th className="pb-4 font-bold">Total</th>
+                      <th className="pb-4 font-bold">Status</th>
+                      <th className="pb-4 font-bold">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F5F5F0]">
+                    {orders.map(o => (
+                      <tr key={o.id} className="text-sm">
+                        <td className="py-6">
+                          <div className="font-bold text-[#2F5233]">{o.customerName}</div>
+                          <div className="text-xs text-[#5C4033]/60">{o.customerEmail}</div>
+                        </td>
+                        <td className="py-6">
+                          <div className="text-xs">{o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</div>
+                        </td>
+                        <td className="py-6 font-bold text-[#2F5233]">${o.total.toFixed(2)}</td>
+                        <td className="py-6">
+                          <select 
+                            value={o.status} 
+                            onChange={e => handleUpdateOrderStatus(o.id, e.target.value)}
+                            className={`p-2 rounded-lg text-xs font-bold ${
+                              o.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 
+                              o.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                            }`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                          </select>
+                        </td>
+                        <td className="py-6 text-xs text-[#5C4033]/60">{new Date(o.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          {activeTab === 'content' && (
+            <div className="max-w-3xl space-y-8">
+              <h2 className="text-2xl font-serif font-bold text-[#2F5233]">Site Content</h2>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold">About Title</label>
+                  <input value={contentForm.about.title} onChange={e => setContentForm({...contentForm, about: {...contentForm.about, title: e.target.value}})} className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50" />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold">About Content</label>
+                  <textarea value={contentForm.about.content} rows={5} onChange={e => setContentForm({...contentForm, about: {...contentForm.about, content: e.target.value}})} className="w-full p-3 rounded-xl border border-[#F5F5F0] bg-[#F5F5F0]/50 resize-none" />
+                </div>
+                <button onClick={() => api.saveContent(contentForm, token).then(() => refreshData())} className="bg-[#2F5233] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#5C4033] transition-all flex items-center gap-2">
+                  <Save size={18} /> Save Changes
+                </button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
-};
-
-export default Admin;
+}

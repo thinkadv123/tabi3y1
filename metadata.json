@@ -1,5 +1,7 @@
 {
-  "description": "Organic vegetable and poultry e-commerce website.",
-  "requestFramePermissions": [],
-  "name": "Tabi3y"
+  "name": "Tabi3y Organic Farm",
+  "description": "Premium organic farm e-commerce selling chemical-free vegetables and free-range poultry.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }

@@ -3,57 +3,39 @@ import { Product, Category, SiteContent } from './types';
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: '1',
-    name: 'Organic Carrots',
-    price: 45.00,
-    description: 'Fresh, crunchy organic carrots harvested daily from our local farms.',
-    image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&q=80&w=800',
+    name: 'Organic Tomatoes',
+    price: 3.50,
+    description: 'Fresh, vine-ripened organic tomatoes grown without pesticides.',
+    image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&q=80&w=800',
     category: 'Vegetables',
     unit: 'kg'
   },
   {
     id: '2',
-    name: 'Free-Range Chicken',
-    price: 250.00,
-    description: 'Premium free-range chicken, raised without antibiotics or hormones.',
-    image: 'https://images.unsplash.com/photo-1587593810167-a6492031e5fd?auto=format&fit=crop&q=80&w=800',
+    name: 'Free-Range Eggs',
+    price: 5.00,
+    description: 'Farm-fresh eggs from our happy, pasture-raised chickens.',
+    image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&q=80&w=800',
     category: 'Poultry',
-    unit: 'whole'
+    unit: 'dozen'
   },
   {
     id: '3',
-    name: 'Fresh Spinach',
-    price: 35.00,
-    description: 'Nutrient-rich organic spinach leaves, perfect for salads or cooking.',
+    name: 'Organic Spinach',
+    price: 2.50,
+    description: 'Crispy, nutrient-rich spinach leaves harvested daily.',
     image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=800',
     category: 'Vegetables',
     unit: 'bunch'
   },
   {
     id: '4',
-    name: 'Organic Eggs',
-    price: 120.00,
-    description: 'Farm-fresh organic eggs from free-range hens.',
-    image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&q=80&w=800',
+    name: 'Whole Organic Chicken',
+    price: 15.00,
+    description: 'Premium free-range chicken, raised with natural feed.',
+    image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&q=80&w=800',
     category: 'Poultry',
-    unit: 'carton (30)'
-  },
-  {
-    id: '5',
-    name: 'Red Bell Peppers',
-    price: 60.00,
-    description: 'Sweet and crisp red bell peppers, grown organically.',
-    image: 'https://images.unsplash.com/photo-1563565375-f3fdf5d2e35c?auto=format&fit=crop&q=80&w=800',
-    category: 'Vegetables',
-    unit: 'kg'
-  },
-  {
-    id: '6',
-    name: 'Whole Duck',
-    price: 450.00,
-    description: 'Premium whole duck, perfect for roasting.',
-    image: 'https://images.unsplash.com/photo-1627483297929-37f416fec7cd?auto=format&fit=crop&q=80&w=800',
-    category: 'Poultry',
-    unit: 'whole'
+    unit: 'piece'
   }
 ];
 
@@ -61,25 +43,25 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: '1', name: 'Vegetables' },
   { id: '2', name: 'Poultry' },
   { id: '3', name: 'Fruits' },
-  { id: '4', name: 'Dairy' },
-  { id: '5', name: 'Pantry' }
+  { id: '4', name: 'Dairy' }
 ];
 
 export const INITIAL_SITE_CONTENT: SiteContent = {
   about: {
-    title: 'Our Roots',
-    content: 'Tabi3y was born from a simple belief: that nature provides everything we need to live a healthy, vibrant life. We started as a small community initiative connecting local organic farmers with families who cared about what they put on their plates.',
-    image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=1200',
+    title: 'Our Story',
+    content: 'At Tabi3y, we believe in the power of nature. Our farm is dedicated to providing the community with the freshest, chemical-free vegetables and free-range poultry, raised with care and respect for the environment.',
+    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1200',
     sections: [
-      { title: 'Our Mission', content: 'To make organic, sustainably sourced food accessible to everyone while supporting local agriculture and preserving our environment.' },
-      { title: 'Our Promise', content: 'Every product you receive is hand-picked, 100% organic, and delivered with care. No compromises on quality or ethics.' }
+      { title: '100% Organic', content: 'No pesticides, no chemicals, just pure nature.', icon: 'Leaf' },
+      { title: 'Free Range', content: 'Our animals roam freely in open pastures.', icon: 'Bird' },
+      { title: 'Local Farm', content: 'Supporting our local community and economy.', icon: 'Home' }
     ]
   },
   contact: {
     title: 'Get in Touch',
-    content: 'Have questions or feedback? We\'d love to hear from you. Reach out to us using the form or our contact details.',
+    content: 'Have questions about our products or want to visit the farm? We would love to hear from you!',
     email: 'hello@tabi3y.com',
     phone: '+20 123 456 7890',
-    address: '123 Nile View, Cairo, Egypt'
+    address: 'Green Valley Farm, Organic Road, Cairo, Egypt'
   }
 };

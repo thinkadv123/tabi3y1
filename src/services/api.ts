@@ -1,255 +1,113 @@
-import { Product, Category, SiteContent } from '../types';
-import { db, auth } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, query, orderBy, writeBatch } from 'firebase/firestore';
-import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
-import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_SITE_CONTENT } from '../data';
+import { Product, Category, SiteContent, Order } from '../types';
 
-// Reliable auth waiter
-const waitForAuth = (): Promise<User | null> => {
-  return new Promise((resolve) => {
-    if (auth.currentUser) {
-      resolve(auth.currentUser);
-      return;
-    }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe();
-      resolve(user);
-    });
-  });
-};
+const API_URL = '/api';
 
-// Ensure user is authenticated for Firestore rules
-const ensureAuth = async () => {
-  let user = await waitForAuth();
-  
-  if (!user) {
-    try {
-      console.log('No user found, signing in anonymously...');
-      const cred = await signInAnonymously(auth);
-      user = cred.user;
-      console.log('Signed in anonymously:', user.uid);
-    } catch (error: any) {
-      if (error.code === 'auth/configuration-not-found') {
-        console.error('CRITICAL: Anonymous Authentication is not enabled in your Firebase Console. Please enable it under Authentication > Sign-in method.');
-      } else {
-        console.error('Anonymous auth failed:', error);
-      }
-    }
-  } else {
-    console.log('Already authenticated:', user.uid);
-  }
-  return user;
-};
-
-// Initialize auth immediately
-ensureAuth();
+const getHeaders = (token?: string) => ({
+  'Content-Type': 'application/json',
+  ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+});
 
 export const api = {
-  // --- Auth ---
-  login: async (username: string, password: string): Promise<string | null> => {
-    await ensureAuth();
-    try {
-      if (username === 'admin' && password === 'admin123') {
-        return 'mock-firebase-token';
-      }
-      return null;
-    } catch (error) {
-      console.error('Login failed:', error);
-      return null;
-    }
+  async login(username: string, password: string): Promise<string | null> {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.token;
   },
 
-  // --- Products ---
-  getProducts: async (): Promise<Product[]> => {
-    await ensureAuth();
-    try {
-      const querySnapshot = await getDocs(collection(db, 'products'));
-      console.log(`Fetched ${querySnapshot.size} products`);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
-      return [];
-    }
+  async getProducts(): Promise<Product[]> {
+    const res = await fetch(`${API_URL}/products`);
+    return res.json();
   },
 
-  saveProduct: async (product: Product, token: string): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      const { id, ...data } = product;
-      console.log('Saving product:', data);
-      const docRef = await addDoc(collection(db, 'products'), data);
-      console.log('Product saved with ID:', docRef.id);
-      return true;
-    } catch (error) {
-      console.error('Failed to save product:', error);
-      return false;
-    }
+  async saveProduct(product: Product, token: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/products`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(product)
+    });
+    return res.ok;
   },
 
-  updateProduct: async (product: Product, token: string): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      const { id, ...data } = product;
-      await updateDoc(doc(db, 'products', id), data);
-      return true;
-    } catch (error) {
-      console.error('Failed to update product:', error);
-      return false;
-    }
+  async updateProduct(product: Product, token: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/products/${product.id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(product)
+    });
+    return res.ok;
   },
 
-  deleteProduct: async (id: string, token: string): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      await deleteDoc(doc(db, 'products', id));
-      return true;
-    } catch (error) {
-      console.error('Failed to delete product:', error);
-      return false;
-    }
+  async deleteProduct(id: string, token: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/products/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    return res.ok;
   },
 
-  // --- Categories ---
-  getCategories: async (): Promise<Category[]> => {
-    await ensureAuth();
-    try {
-      const querySnapshot = await getDocs(collection(db, 'categories'));
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-      return [];
-    }
+  async getCategories(): Promise<Category[]> {
+    const res = await fetch(`${API_URL}/categories`);
+    return res.json();
   },
 
-  saveCategory: async (category: Category, token: string): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      const { id, ...data } = category;
-      await addDoc(collection(db, 'categories'), data);
-      return true;
-    } catch (error) {
-      console.error('Failed to save category:', error);
-      return false;
-    }
+  async saveCategory(category: Category, token: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/categories`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(category)
+    });
+    return res.ok;
   },
 
-  deleteCategory: async (id: string, token: string): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      await deleteDoc(doc(db, 'categories', id));
-      return true;
-    } catch (error) {
-      console.error('Failed to delete category:', error);
-      return false;
-    }
+  async deleteCategory(id: string, token: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/categories/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    return res.ok;
   },
 
-  // --- Orders ---
-  createOrder: async (order: any): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      const newOrder = {
-        ...order,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
-      await addDoc(collection(db, 'orders'), newOrder);
-      return true;
-    } catch (error) {
-      console.error('Failed to create order:', error);
-      return false;
-    }
+  async createOrder(order: any): Promise<boolean> {
+    const res = await fetch(`${API_URL}/orders`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(order)
+    });
+    return res.ok;
   },
 
-  getOrders: async (token: string): Promise<any[]> => {
-    await ensureAuth();
-    try {
-      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-      return [];
-    }
+  async getOrders(token: string): Promise<Order[]> {
+    const res = await fetch(`${API_URL}/orders`, {
+      headers: getHeaders(token)
+    });
+    return res.json();
   },
 
-  updateOrderStatus: async (id: string, status: string, token: string): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      await updateDoc(doc(db, 'orders', id), { status });
-      return true;
-    } catch (error) {
-      console.error('Failed to update order status:', error);
-      return false;
-    }
+  async updateOrderStatus(id: string, status: string, token: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/orders/${id}/status`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify({ status })
+    });
+    return res.ok;
   },
 
-  // --- Site Content ---
-  getContent: async (): Promise<SiteContent> => {
-    await ensureAuth();
-    try {
-      const docRef = doc(db, 'content', 'main');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return docSnap.data() as SiteContent;
-      } else {
-        return INITIAL_SITE_CONTENT;
-      }
-    } catch (error) {
-      console.error('Failed to fetch site content:', error);
-      return INITIAL_SITE_CONTENT;
-    }
+  async getContent(): Promise<SiteContent> {
+    const res = await fetch(`${API_URL}/site`);
+    return res.json();
   },
 
-  saveContent: async (content: SiteContent, token: string): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      await setDoc(doc(db, 'content', 'main'), content);
-      return true;
-    } catch (error) {
-      console.error('Failed to save content:', error);
-      return false;
-    }
-  },
-
-  // --- Seed Database ---
-  seedDatabase: async (): Promise<boolean> => {
-    await ensureAuth();
-    try {
-      const batch = writeBatch(db);
-
-      // Seed Products
-      const productsSnapshot = await getDocs(collection(db, 'products'));
-      if (productsSnapshot.empty) {
-        INITIAL_PRODUCTS.forEach((product) => {
-          const { id, ...data } = product;
-          const docRef = doc(collection(db, 'products'));
-          batch.set(docRef, data);
-        });
-      }
-
-      // Seed Categories
-      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-      if (categoriesSnapshot.empty) {
-        INITIAL_CATEGORIES.forEach((category) => {
-          const { id, ...data } = category;
-          const docRef = doc(collection(db, 'categories'));
-          batch.set(docRef, data);
-        });
-      }
-
-      // Seed Site Content
-      const contentRef = doc(db, 'content', 'main');
-      const contentSnap = await getDoc(contentRef);
-      if (!contentSnap.exists()) {
-        batch.set(contentRef, INITIAL_SITE_CONTENT);
-      }
-
-      await batch.commit();
-      return true;
-    } catch (error) {
-      console.error('Failed to seed database:', error);
-      return false;
-    }
+  async saveContent(content: SiteContent, token: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/site`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(content)
+    });
+    return res.ok;
   }
 };
