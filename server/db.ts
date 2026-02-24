@@ -15,15 +15,8 @@ if (!dbPath) {
   // In production (Netlify Functions), use /tmp for writable SQLite
   if (process.env.NODE_ENV === 'production') {
     const tmpPath = '/tmp/app.db';
-    try {
-      // Try to copy existing DB to /tmp if it exists and /tmp doesn't have it yet
-      if (fs.existsSync(localPath) && !fs.existsSync(tmpPath)) {
-        fs.copyFileSync(localPath, tmpPath);
-        console.log('Copied database to /tmp/app.db');
-      }
-    } catch (e) {
-      console.warn('Failed to copy database to /tmp:', e);
-    }
+    // Always start with a fresh DB in /tmp to ensure seeding works correctly
+    // and avoid issues with copying potentially stale/empty local files.
     dbPath = `file:${tmpPath}`;
   } else {
     dbPath = `file:${localPath}`;

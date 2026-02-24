@@ -29,14 +29,21 @@ const authenticateToken = (req: any, res: any, next: any) => {
 // Auth
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
+  console.log('Login attempt for:', username);
   try {
     const result = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
     const user = result.rows[0] as any;
 
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) {
+      console.log('User not found:', username);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!validPassword) {
+      console.log('Invalid password for:', username);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ token });
