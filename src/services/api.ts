@@ -24,8 +24,14 @@ export const api = {
 
   // --- Products ---
   getProducts: async (): Promise<Product[]> => {
-    const response = await fetch(`${API_URL}/products`);
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/products`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      return [];
+    }
   },
 
   saveProduct: async (product: Product, token: string): Promise<boolean> => {
@@ -79,8 +85,14 @@ export const api = {
 
   // --- Categories ---
   getCategories: async (): Promise<Category[]> => {
-    const response = await fetch(`${API_URL}/categories`);
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/categories`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      return [];
+    }
   },
 
   saveCategory: async (category: Category, token: string): Promise<boolean> => {
@@ -117,8 +129,18 @@ export const api = {
 
   // --- Site Content ---
   getContent: async (): Promise<SiteContent> => {
-    const response = await fetch(`${API_URL}/site`);
-    return response.json();
+    try {
+      const response = await fetch(`${API_URL}/site`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch site content:', error);
+      // Return a default structure to prevent crashes
+      return {
+        about: { title: '', content: '' },
+        contact: { title: '', content: '', email: '', phone: '', address: '' }
+      };
+    }
   },
 
   saveContent: async (content: SiteContent, token: string): Promise<boolean> => {

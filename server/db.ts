@@ -1,14 +1,34 @@
 import { createClient } from '@libsql/client';
 import path from 'path';
+import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_SITE_CONTENT } from '../src/data';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const dbPath = process.env.TURSO_DATABASE_URL 
-  ? process.env.TURSO_DATABASE_URL 
-  : `file:${path.resolve(process.cwd(), 'server/data/app.db')}`;
+let dbPath = process.env.TURSO_DATABASE_URL;
+
+if (!dbPath) {
+  const localPath = path.resolve(process.cwd(), 'server/data/app.db');
+  
+  // In production (Netlify Functions), use /tmp for writable SQLite
+  if (process.env.NODE_ENV === 'production') {
+    const tmpPath = '/tmp/app.db';
+    try {
+      // Try to copy existing DB to /tmp if it exists and /tmp doesn't have it yet
+      if (fs.existsSync(localPath) && !fs.existsSync(tmpPath)) {
+        fs.copyFileSync(localPath, tmpPath);
+        console.log('Copied database to /tmp/app.db');
+      }
+    } catch (e) {
+      console.warn('Failed to copy database to /tmp:', e);
+    }
+    dbPath = `file:${tmpPath}`;
+  } else {
+    dbPath = `file:${localPath}`;
+  }
+}
 
 console.log('Database URL:', dbPath);
 
