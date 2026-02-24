@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingLeaf, User, ShoppingCart, Menu, X } from 'lucide-react';
+import { User, ShoppingCart, Menu, X } from 'lucide-react';
 import { ViewState } from '../types';
 
 interface HeaderProps {

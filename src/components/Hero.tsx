@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { ArrowRight, Leaf, Bird, ShieldCheck } from 'lucide-react';
 
 interface HeroProps {
@@ -84,5 +85,3 @@ export default function Hero({ onShopNow }: HeroProps) {
     </div>
   );
 }
-
-import { motion } from 'motion/react';

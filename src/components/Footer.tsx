@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingLeaf, Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react';
+import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react';
 
 export default function Footer() {
   return (
